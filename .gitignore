@@ -17,5 +17,10 @@ __pycache__
 
 # Visual Studio
 /.vs/
+
+# Docker build cache
 .docker-conan-cache/
 .docker-conan2-cache/
+
+# CMake presets
+CMakeUserPresets.json

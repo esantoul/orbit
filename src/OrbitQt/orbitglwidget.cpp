@@ -190,7 +190,12 @@ void OrbitGLWidget::messageLogged(const QOpenGLDebugMessage& msg) {
 
 void OrbitGLWidget::resizeGL(int w, int h) {
   if (gl_canvas_) {
-    gl_canvas_->Resize(w, h);
+    // On high-DPI displays, the actual framebuffer size is larger than the logical widget size
+    // by the device pixel ratio. We need to use the actual framebuffer size for OpenGL rendering.
+    qreal pixel_ratio = devicePixelRatio();
+    int framebuffer_width = static_cast<int>(w * pixel_ratio);
+    int framebuffer_height = static_cast<int>(h * pixel_ratio);
+    gl_canvas_->Resize(framebuffer_width, framebuffer_height);
     ORBIT_CHECK(this->geometry().width() == w);
     ORBIT_CHECK(this->geometry().height() == h);
   }
@@ -199,7 +204,11 @@ void OrbitGLWidget::resizeGL(int w, int h) {
 void OrbitGLWidget::paintGL() {
   ORBIT_SCOPE_FUNCTION;
   if (gl_canvas_) {
-    gl_canvas_->Render(width(), height());
+    // On high-DPI displays, use the actual framebuffer size (physical pixels), not logical size
+    qreal pixel_ratio = devicePixelRatio();
+    int framebuffer_width = static_cast<int>(width() * pixel_ratio);
+    int framebuffer_height = static_cast<int>(height() * pixel_ratio);
+    gl_canvas_->Render(framebuffer_width, framebuffer_height);
   }
 
   static volatile bool doScreenShot = false;
@@ -216,16 +225,21 @@ void OrbitGLWidget::TakeScreenShot() {
 
 void OrbitGLWidget::mousePressEvent(QMouseEvent* event) {
   if (gl_canvas_) {
+    // Scale mouse coordinates by device pixel ratio to match framebuffer coordinates
+    qreal pixel_ratio = devicePixelRatio();
+    int scaled_x = static_cast<int>(event->x() * pixel_ratio);
+    int scaled_y = static_cast<int>(event->y() * pixel_ratio);
+
     if (event->buttons() == Qt::LeftButton) {
-      gl_canvas_->LeftDown(event->x(), event->y());
+      gl_canvas_->LeftDown(scaled_x, scaled_y);
     }
 
     if (event->buttons() == Qt::RightButton) {
-      gl_canvas_->RightDown(event->x(), event->y());
+      gl_canvas_->RightDown(scaled_x, scaled_y);
     }
 
     if (event->buttons() == Qt::MiddleButton) {
-      gl_canvas_->MiddleDown(event->x(), event->y());
+      gl_canvas_->MiddleDown(scaled_x, scaled_y);
     }
   }
 
@@ -289,7 +303,11 @@ void OrbitGLWidget::mouseDoubleClickEvent(QMouseEvent* event) {
 
 void OrbitGLWidget::mouseMoveEvent(QMouseEvent* event) {
   if (gl_canvas_) {
-    gl_canvas_->MouseMoved(event->x(), event->y(), event->buttons() & Qt::LeftButton,
+    // Scale mouse coordinates by device pixel ratio to match framebuffer coordinates
+    qreal pixel_ratio = devicePixelRatio();
+    int scaled_x = static_cast<int>(event->x() * pixel_ratio);
+    int scaled_y = static_cast<int>(event->y() * pixel_ratio);
+    gl_canvas_->MouseMoved(scaled_x, scaled_y, event->buttons() & Qt::LeftButton,
                            event->buttons() & Qt::RightButton, event->buttons() & Qt::MiddleButton);
   }
 
@@ -329,11 +347,16 @@ void OrbitGLWidget::keyReleaseEvent(QKeyEvent* event) {
 
 void OrbitGLWidget::wheelEvent(QWheelEvent* event) {
   if (gl_canvas_) {
+    // Scale mouse coordinates by device pixel ratio to match framebuffer coordinates
+    qreal pixel_ratio = devicePixelRatio();
+    int scaled_x = static_cast<int>(event->x() * pixel_ratio);
+    int scaled_y = static_cast<int>(event->y() * pixel_ratio);
+
     if (event->orientation() == Qt::Vertical) {
-      gl_canvas_->MouseWheelMoved(event->x(), event->y(), event->delta() / 8,
+      gl_canvas_->MouseWheelMoved(scaled_x, scaled_y, event->delta() / 8,
                                   event->modifiers() & Qt::ControlModifier);
     } else {
-      gl_canvas_->MouseWheelMovedHorizontally(event->x(), event->y(), event->delta() / 8,
+      gl_canvas_->MouseWheelMovedHorizontally(scaled_x, scaled_y, event->delta() / 8,
                                               event->modifiers() & Qt::ControlModifier);
     }
   }

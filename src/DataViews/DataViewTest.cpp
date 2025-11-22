@@ -40,8 +40,8 @@ TEST(DataView, FormatValueForCsvQuotesString) {
 }
 
 TEST(DataView, FormatValueForCsvEscapesQuotesInString) {
-  constexpr std::string_view kInput("string\"with\"quotes");
-  constexpr std::string_view kExpectedResult("\"string\"\"with\"\"quotes\"");
+  constexpr absl::string_view kInput("string\"with\"quotes");
+  constexpr absl::string_view kExpectedResult("\"string\"\"with\"\"quotes\"");
   EXPECT_EQ(kExpectedResult, FormatValueForCsv(kInput));
 }
 

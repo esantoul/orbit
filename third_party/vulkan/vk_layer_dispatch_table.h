@@ -173,9 +173,9 @@ typedef struct VkLayerInstanceDispatchTable_ {
   PFN_vkCreateViSurfaceNN CreateViSurfaceNN;
 #endif  // VK_USE_PLATFORM_VI_NN
 
-  // ---- VK_NVX_device_generated_commands extension commands
-  PFN_vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX
-      GetPhysicalDeviceGeneratedCommandsPropertiesNVX;
+  // ---- VK_NVX_device_generated_commands extension commands (deprecated in newer Vulkan)
+  // PFN_vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX
+  //     GetPhysicalDeviceGeneratedCommandsPropertiesNVX;
 
   // ---- VK_EXT_direct_mode_display extension commands
   PFN_vkReleaseDisplayEXT ReleaseDisplayEXT;
@@ -492,8 +492,8 @@ typedef struct VkLayerDispatchTable_ {
   PFN_vkCmdEndQueryIndexedEXT CmdEndQueryIndexedEXT;
   PFN_vkCmdDrawIndirectByteCountEXT CmdDrawIndirectByteCountEXT;
 
-  // ---- VK_NVX_image_view_handle extension commands
-  PFN_vkGetImageViewHandleNVX GetImageViewHandleNVX;
+  // ---- VK_NVX_image_view_handle extension commands (deprecated in newer Vulkan)
+  // PFN_vkGetImageViewHandleNVX GetImageViewHandleNVX;
 
   // ---- VK_AMD_draw_indirect_count extension commands
   PFN_vkCmdDrawIndirectCountAMD CmdDrawIndirectCountAMD;
@@ -511,15 +511,15 @@ typedef struct VkLayerDispatchTable_ {
   PFN_vkCmdBeginConditionalRenderingEXT CmdBeginConditionalRenderingEXT;
   PFN_vkCmdEndConditionalRenderingEXT CmdEndConditionalRenderingEXT;
 
-  // ---- VK_NVX_device_generated_commands extension commands
-  PFN_vkCmdProcessCommandsNVX CmdProcessCommandsNVX;
-  PFN_vkCmdReserveSpaceForCommandsNVX CmdReserveSpaceForCommandsNVX;
-  PFN_vkCreateIndirectCommandsLayoutNVX CreateIndirectCommandsLayoutNVX;
-  PFN_vkDestroyIndirectCommandsLayoutNVX DestroyIndirectCommandsLayoutNVX;
-  PFN_vkCreateObjectTableNVX CreateObjectTableNVX;
-  PFN_vkDestroyObjectTableNVX DestroyObjectTableNVX;
-  PFN_vkRegisterObjectsNVX RegisterObjectsNVX;
-  PFN_vkUnregisterObjectsNVX UnregisterObjectsNVX;
+  // ---- VK_NVX_device_generated_commands extension commands (deprecated in newer Vulkan)
+  // PFN_vkCmdProcessCommandsNVX CmdProcessCommandsNVX;
+  // PFN_vkCmdReserveSpaceForCommandsNVX CmdReserveSpaceForCommandsNVX;
+  // PFN_vkCreateIndirectCommandsLayoutNVX CreateIndirectCommandsLayoutNVX;
+  // PFN_vkDestroyIndirectCommandsLayoutNVX DestroyIndirectCommandsLayoutNVX;
+  // PFN_vkCreateObjectTableNVX CreateObjectTableNVX;
+  // PFN_vkDestroyObjectTableNVX DestroyObjectTableNVX;
+  // PFN_vkRegisterObjectsNVX RegisterObjectsNVX;
+  // PFN_vkUnregisterObjectsNVX UnregisterObjectsNVX;
 
   // ---- VK_NV_clip_space_w_scaling extension commands
   PFN_vkCmdSetViewportWScalingNV CmdSetViewportWScalingNV;

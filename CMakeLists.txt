@@ -70,8 +70,8 @@ set(CMAKE_CXX_STANDARD 17)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
-conan_basic_setup(TARGETS)
+# Conan 2.x: No need for conanbuildinfo files, toolchain is automatically included
+# via CMAKE_TOOLCHAIN_FILE set by conan build command
 
 if (NOT WIN32)
   # Make all executables position independent on Linux
@@ -108,6 +108,29 @@ if(WITH_GUI)
 endif()
 
 find_package(Filesystem REQUIRED)
+
+# Conan 2.x: Find packages provided by Conan
+find_package(capstone REQUIRED CONFIG)
+find_package(grpc REQUIRED CONFIG)
+find_package(absl REQUIRED CONFIG)
+find_package(llvm-core REQUIRED CONFIG)
+find_package(outcome REQUIRED CONFIG)
+find_package(libprotobuf-mutator REQUIRED CONFIG)
+find_package(volk REQUIRED CONFIG)
+find_package(freetype-gl REQUIRED CONFIG)
+find_package(glad REQUIRED CONFIG)
+find_package(imgui REQUIRED CONFIG)
+find_package(Libssh2 REQUIRED CONFIG)
+find_package(GTest REQUIRED CONFIG)
+find_package(protobuf REQUIRED CONFIG)  # For protobuf::libprotobuf
+find_package(Freetype REQUIRED CONFIG)  # For Freetype::Freetype (note capital F)
+find_package(LibLZMA REQUIRED CONFIG)   # For LibLZMA::LibLZMA (used by libunwindstack)
+# Note: vulkan-headers is provided transitively by volk, no explicit find_package needed
+# Note: crashpad is conditionally required based on build options - will be found if present
+
+if(NOT WIN32)
+  find_package(libunwindstack-android-dependencies REQUIRED CONFIG)
+endif()
 
 if(WIN32)
   find_package(DiaSdk REQUIRED)

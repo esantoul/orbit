@@ -38,8 +38,9 @@ target_link_libraries(IntegrationTestCommons PUBLIC
         ObjectUtils
         OrbitBase
         OffscreenRenderingVulkanTutorialLib
-        GTest::GTest
-        CONAN_PKG::abseil)
+        GTest::gtest
+  GTest::gmock
+        abseil::abseil)
 
 
 add_executable(LinuxTracingIntegrationTests)
@@ -53,9 +54,10 @@ target_link_libraries(LinuxTracingIntegrationTests PRIVATE
         LinuxTracing
         ObjectUtils
         OrbitBase
-        GTest::GTest
+        GTest::gtest
+  GTest::gmock
         GTest::Main
-        CONAN_PKG::abseil)
+        abseil::abseil)
 
 strip_symbols(LinuxTracingIntegrationTests)
 
@@ -78,9 +80,10 @@ target_link_libraries(OrbitServiceIntegrationTests PRIVATE
         OrbitBase
         OrbitServiceLib
         OrbitVersion
-        GTest::GTest
+        GTest::gtest
+  GTest::gmock
         GTest::Main
-        CONAN_PKG::abseil)
+        abseil::abseil)
 
 strip_symbols(OrbitServiceIntegrationTests)
 

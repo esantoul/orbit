@@ -46,10 +46,10 @@ class PresetsDataView : public DataView {
   void OnShowInExplorerRequested(const std::vector<int>& selection) override;
   void OnLoadPresetSuccessful(const std::filesystem::path& preset_file_path);
 
-  static constexpr std::string_view kLoadedPresetPrefix{"* "};
-  static constexpr std::string_view kNotLoadedPresetPrefix{"  "};
-  static constexpr std::string_view kLoadedPresetTooltipSuffix{" (loaded)"};
-  static constexpr std::string_view kNotLoadedPresetTooltipSuffix{""};
+  static constexpr absl::string_view kLoadedPresetPrefix{"* "};
+  static constexpr absl::string_view kNotLoadedPresetPrefix{"  "};
+  static constexpr absl::string_view kLoadedPresetTooltipSuffix{" (loaded)"};
+  static constexpr absl::string_view kNotLoadedPresetTooltipSuffix{""};
 
  protected:
   struct ModuleView {

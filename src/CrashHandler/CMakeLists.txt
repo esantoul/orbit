@@ -14,7 +14,7 @@ target_include_directories(CrashHandler PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include
 target_sources(CrashHandler PUBLIC include/CrashHandler/CrashHandler.h
                                    include/CrashHandler/CrashOptions.h
                             PRIVATE CrashHandler.cpp)
-target_link_libraries(CrashHandler PUBLIC CONAN_PKG::crashpad
+target_link_libraries(CrashHandler PUBLIC crashpad::crashpad
                                    PRIVATE OrbitBase
                                            OrbitVersion)
 

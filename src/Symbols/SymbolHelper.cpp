@@ -100,8 +100,8 @@ std::vector<fs::path> ReadSymbolsFile(const fs::path& file_name) {
 
   std::vector<std::string> lines =
       absl::StrSplit(file_content_or_error.value(), absl::ByAnyChar("\r\n"));
-  for (std::string_view line : lines) {
-    line = absl::StripAsciiWhitespace(line);
+  for (std::string_view line_view : lines) {
+    absl::string_view line = absl::StripAsciiWhitespace(absl::string_view(line_view.data(), line_view.size()));
 
     if (absl::StartsWith(line, "//") || line.empty()) continue;
 
@@ -109,7 +109,7 @@ std::vector<fs::path> ReadSymbolsFile(const fs::path& file_name) {
       line = line.substr(1, line.size() - 2);
     }
 
-    const fs::path dir = line;
+    const fs::path dir = std::string(line);
     bool is_directory = fs::is_directory(dir, error);
     if (error) {
       ORBIT_ERROR("Unable to stat \"%s\": %s (skipping)", dir.string(), error.message());

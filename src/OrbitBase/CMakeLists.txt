@@ -96,8 +96,8 @@ target_sources(OrbitBase PRIVATE
 endif()
 
 target_link_libraries(OrbitBase PUBLIC
-        CONAN_PKG::abseil
-        CONAN_PKG::outcome
+        abseil::abseil
+        outcome::outcome
         std::filesystem)
 
 add_executable(OrbitBaseTests)
@@ -160,7 +160,8 @@ endif()
 target_link_libraries(OrbitBaseTests PRIVATE
         OrbitBase
         TestUtils
-        GTest::GTest
+        GTest::gtest
+  GTest::gmock
         GTest::Main)
 
 register_test(OrbitBaseTests)

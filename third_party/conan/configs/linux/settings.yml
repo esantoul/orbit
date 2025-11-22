@@ -66,6 +66,13 @@ compiler:
                   LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp,
                   LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2, v142]
         cppstd: [None, 14, 17, 20]
+    msvc:
+        version: ["170", "180", "190", "191", "192", "193"]
+        update: [None, "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+        runtime: [static, dynamic]
+        runtime_type: [Debug, Release]
+        cppstd: [None, 14, 17, 20, 23]
+        toolset: [None, v140, v141, v142, v143]
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                   "5.0", "6.0", "7.0", "7.1",

@@ -78,7 +78,7 @@ template <typename Func>
 }
 
 void PrintAsOrbitService(const std::string& buffer) {
-  std::vector<std::string_view> lines = absl::StrSplit(buffer, '\n');
+  std::vector<std::string> lines = absl::StrSplit(absl::string_view(buffer.data(), buffer.size()), "\n");
   for (const auto& line : lines) {
     if (!line.empty()) {
       ORBIT_INTERNAL_PLATFORM_LOG(
@@ -555,9 +555,9 @@ ErrorMessageOr<void> ServiceDeployManager::StartOrbitService(
 
                      // That's what we expect the service to send through stdout when it's ready to
                      // accept a connection from the client.
-                     constexpr std::string_view kReadyKeyword = "READY";
+                    constexpr std::string_view kReadyKeyword = "READY";
 
-                     if (absl::StrContains(stdout_buffer, kReadyKeyword)) {
+                    if (absl::StrContains(absl::string_view(stdout_buffer.data(), stdout_buffer.size()), absl::string_view(kReadyKeyword.data(), kReadyKeyword.size()))) {
                        ORBIT_LOG("The service reported to be ready to accept connections.");
                        loop.quit();
                        return;

@@ -2,16 +2,14 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 index 9fb9316..e79ec1f 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -6,6 +6,8 @@
+@@ -6,6 +6,6 @@
  cmake_minimum_required(VERSION 2.8.12)
  
  project(freetype-gl LANGUAGES C CXX)
-+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-+conan_basic_setup()
  
  set(CMAKE_MODULE_PATH
      "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
-@@ -83,7 +85,7 @@ if(NOT MINGW AND (WIN32 OR WIN64))
+@@ -83,7 +83,7 @@ if(NOT MINGW AND (WIN32 OR WIN64))
  endif()
  
  find_package(OpenGL REQUIRED)

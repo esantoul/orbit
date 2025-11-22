@@ -23,7 +23,7 @@ using orbit_metrics_uploader::OrbitLogEvent;
 
 namespace orbit_data_views {
 
-std::string FormatValueForCsv(std::string_view value) {
+std::string FormatValueForCsv(absl::string_view value) {
   std::string result;
   result.append("\"");
   result.append(absl::StrReplaceAll(value, {{"\"", "\"\""}}));
@@ -334,9 +334,9 @@ ErrorMessageOr<void> DataView::ExportToCsv(const std::string_view file_path) {
     std::string line;
     for (size_t j = 0; j < num_columns; ++j) {
       line.append(FormatValueForCsv(GetValueForCopy(i, j)));
-      if (j < num_columns - 1) line.append(kFieldSeparator);
+      if (j < num_columns - 1) line.append(kFieldSeparator.data(), kFieldSeparator.size());
     }
-    line.append(kLineSeparator);
+    line.append(kLineSeparator.data(), kLineSeparator.size());
     OUTCOME_TRY(orbit_base::WriteFully(fd, line));
   }
   return outcome::success();

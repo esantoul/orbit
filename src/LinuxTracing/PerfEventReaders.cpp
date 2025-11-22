@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <string.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -452,6 +453,100 @@ void ReadPerfSampleIdAll(PerfEventRingBuffer* ring_buffer, const perf_event_head
   };
 }
 
+[[nodiscard]] TaskNewtaskPerfEvent ConsumeTaskNewtaskPerfEvent(PerfEventRingBuffer* ring_buffer,
+                                                               const perf_event_header& header) {
+  // The flags here are in sync with tracepoint_event_open in PerfEventOpen.
+  // TODO(b/242020362): use the same perf_event_attr object from tracepoint_event_open
+  const perf_event_attr flags{
+      .sample_type = PERF_SAMPLE_RAW | SAMPLE_TYPE_TID_TIME_STREAMID_CPU,
+  };
+
+  PerfRecordSample res = ConsumeRecordSample(ring_buffer, header, flags);
+
+  // Read the tracepoint data. We only need the first few fields: common, pid, and comm[16].
+  // The minimum size we need is: sizeof(tracepoint_common) + sizeof(int32_t) + 16 = 8 + 4 + 16 = 28
+  constexpr size_t kMinRequiredSize = sizeof(tracepoint_common) + sizeof(int32_t) + 16;
+  if (res.raw_size < kMinRequiredSize) {
+    ORBIT_ERROR("task_newtask tracepoint data too small: %u bytes, need at least %zu bytes",
+                res.raw_size, kMinRequiredSize);
+    ring_buffer->SkipRecord(header);
+    return TaskNewtaskPerfEvent{
+        .timestamp = res.time,
+        .ordered_stream = PerfEventOrderedStream::FileDescriptor(ring_buffer->GetFileDescriptor()),
+        .data = {},
+    };
+  }
+
+  task_newtask_tracepoint task_newtask;
+  // Only copy the minimum required size to avoid issues with kernel version differences
+  std::memcpy(&task_newtask, res.raw_data.get(),
+              std::min(sizeof(task_newtask_tracepoint), static_cast<size_t>(res.raw_size)));
+
+  ring_buffer->SkipRecord(header);
+  TaskNewtaskPerfEvent event{
+      .timestamp = res.time,
+      .ordered_stream = PerfEventOrderedStream::FileDescriptor(ring_buffer->GetFileDescriptor()),
+      .data =
+          {
+              // The tracepoint format calls the new tid "data.pid" but it's effectively the
+              // thread id.
+              // Note that res.pid and res.tid are NOT the pid and tid of the new process/thread,
+              // but the ones of the process/thread that created this one.
+              .new_tid = task_newtask.pid,
+              .was_created_by_tid = static_cast<pid_t>(res.tid),
+              .was_created_by_pid = static_cast<pid_t>(res.pid),
+          },
+  };
+
+  std::memcpy(event.data.comm, task_newtask.comm, 16);
+  return event;
+}
+
+[[nodiscard]] TaskRenamePerfEvent ConsumeTaskRenamePerfEvent(PerfEventRingBuffer* ring_buffer,
+                                                             const perf_event_header& header) {
+  // The flags here are in sync with tracepoint_event_open in PerfEventOpen.
+  // TODO(b/242020362): use the same perf_event_attr object from tracepoint_event_open
+  const perf_event_attr flags{
+      .sample_type = PERF_SAMPLE_RAW | SAMPLE_TYPE_TID_TIME_STREAMID_CPU,
+  };
+
+  PerfRecordSample res = ConsumeRecordSample(ring_buffer, header, flags);
+
+  // Read the tracepoint data. We need: common, pid, oldcomm[16], and newcomm[16].
+  // The minimum size we need is: sizeof(tracepoint_common) + sizeof(int32_t) + 16 + 16 = 8 + 4 + 32 = 44
+  constexpr size_t kMinRequiredSize = sizeof(tracepoint_common) + sizeof(int32_t) + 16 + 16;
+  if (res.raw_size < kMinRequiredSize) {
+    ORBIT_ERROR("task_rename tracepoint data too small: %u bytes, need at least %zu bytes",
+                res.raw_size, kMinRequiredSize);
+    ring_buffer->SkipRecord(header);
+    return TaskRenamePerfEvent{
+        .timestamp = res.time,
+        .ordered_stream = PerfEventOrderedStream::FileDescriptor(ring_buffer->GetFileDescriptor()),
+        .data = {},
+    };
+  }
+
+  task_rename_tracepoint task_rename;
+  // Only copy the minimum required size to avoid issues with kernel version differences
+  std::memcpy(&task_rename, res.raw_data.get(),
+              std::min(sizeof(task_rename_tracepoint), static_cast<size_t>(res.raw_size)));
+
+  ring_buffer->SkipRecord(header);
+  TaskRenamePerfEvent event{
+      .timestamp = res.time,
+      .ordered_stream = PerfEventOrderedStream::FileDescriptor(ring_buffer->GetFileDescriptor()),
+      .data =
+          {
+              // The tracepoint format calls the renamed tid "data.pid" but it's effectively the
+              // thread id. This should match res.tid.
+              .renamed_tid = task_rename.pid,
+          },
+  };
+
+  std::memcpy(event.data.newcomm, task_rename.newcomm, 16);
+  return event;
+}
+
 [[nodiscard]] SchedWakeupWithCallchainPerfEvent ConsumeSchedWakeupWithCallchainPerfEvent(
     PerfEventRingBuffer* ring_buffer, const perf_event_header& header) {
   // The flags here are in sync with tracepoint_with_callchain_event_open in PerfEventOpen.
@@ -653,11 +748,36 @@ template <typename EventType, typename StructType>
       *reinterpret_cast<const StructType*>(tracepoint_data.get());
   const int16_t data_loc_size = static_cast<int16_t>(typed_tracepoint_data.timeline >> 16);
   const int16_t data_loc_offset = static_cast<int16_t>(typed_tracepoint_data.timeline & 0x00ff);
+  
+  // Validate data_loc_size and data_loc_offset to prevent segfaults
+  if (data_loc_size <= 0 || data_loc_offset < 0 ||
+      static_cast<size_t>(data_loc_offset) >= tracepoint_size ||
+      static_cast<size_t>(data_loc_offset + data_loc_size) > tracepoint_size) {
+    ORBIT_ERROR("Invalid data_loc in GPU tracepoint: size=%d, offset=%d, tracepoint_size=%u",
+                data_loc_size, data_loc_offset, tracepoint_size);
+    ring_buffer->SkipRecord(header);
+    return EventType{
+        .timestamp = ring_buffer_record.sample_id.time,
+        .ordered_stream = PerfEventOrderedStream::kNone,
+        .data =
+            {
+                .pid = static_cast<pid_t>(ring_buffer_record.sample_id.pid),
+                .tid = static_cast<pid_t>(ring_buffer_record.sample_id.tid),
+                .context = typed_tracepoint_data.context,
+                .seqno = typed_tracepoint_data.seqno,
+                .timeline_string = "",
+            },
+    };
+  }
+  
   std::vector<char> data_loc_data(data_loc_size);
   std::memcpy(&data_loc_data[0],
               reinterpret_cast<const char*>(tracepoint_data.get()) + data_loc_offset,
               data_loc_size);
-  data_loc_data[data_loc_data.size() - 1] = 0;
+  // Only null-terminate if we have data
+  if (data_loc_data.size() > 0) {
+    data_loc_data[data_loc_data.size() - 1] = 0;
+  }
 
   // dma_fence_signaled events can be out of order of timestamp even on the same ring buffer, hence
   // why PerfEventOrderedStream::kNone. To be safe, do the same for the other GPU events.

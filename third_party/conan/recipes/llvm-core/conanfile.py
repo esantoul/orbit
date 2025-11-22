@@ -1,5 +1,8 @@
-from conans.errors import ConanInvalidConfiguration
-from conans import ConanFile, CMake, tools
+from conan import ConanFile
+from conan.tools.cmake import CMake, cmake_layout, CMakeToolchain
+from conan.tools.files import get, patch, replace_in_file, copy, load, save, rmdir, chdir, collect_libs
+from conan.tools.scm import Version
+from conan.errors import ConanInvalidConfiguration
 
 from collections import defaultdict
 import json
@@ -10,6 +13,7 @@ import os
 
 class LLVMCoreConan(ConanFile):
     name = 'llvm-core'
+    version = '12.0.0'
     description = (
         'A toolkit for the construction of highly optimized compilers,'
         'optimizers, and runtime environments.'
@@ -23,8 +27,8 @@ class LLVMCoreConan(ConanFile):
     options = {
         'shared': [True, False],
         'fPIC': [True, False],
-        'components': 'ANY',
-        'targets': 'ANY',
+        'components': [None, 'ANY'],
+        'targets': [None, 'ANY'],
         'exceptions': [True, False],
         'rtti': [True, False],
         'threads': [True, False],
@@ -66,24 +70,22 @@ class LLVMCoreConan(ConanFile):
         'with_xml2': True
     }
 
-    # Older cmake versions may have issues generating the graphviz output used
-    # to model the components
-    build_requires = [
-        'cmake/3.20.3'
-    ]
-
-    exports_sources = ['CMakeLists.txt', 'patches/*']
-    generators = ['cmake', 'cmake_find_package']
+    exports_sources = ['patches/*']
+    generators = ['CMakeDeps']
     no_copy_source = True
 
     @property
     def _source_subfolder(self):
         return 'source'
 
+    def layout(self):
+        cmake_layout(self)
+
     def _supports_compiler(self):
-        compiler = self.settings.compiler.value
-        version = tools.Version(self.settings.compiler.version)
-        major_rev, minor_rev = int(version.major), int(version.minor)
+        compiler = str(self.settings.compiler)
+        version = Version(self.settings.compiler.version)
+        major_rev = int(str(version.major))
+        minor_rev = int(str(version.minor)) if version.minor and str(version.minor) != 'None' else 0
 
         unsupported_combinations = [
             [compiler == 'gcc', major_rev == 5, minor_rev < 1],
@@ -97,99 +99,25 @@ class LLVMCoreConan(ConanFile):
             raise ConanInvalidConfiguration(message.format(compiler, version))
 
     def _patch_sources(self):
-        for patch in self.conan_data.get('patches', {}).get(self.version, []):
-            tools.patch(**patch)
+        for p in self.conan_data.get('patches', {}).get(self.version, []):
+            patch(self, **p)
 
     def _patch_build(self):
         if os.path.exists('FindIconv.cmake'):
-            tools.replace_in_file('FindIconv.cmake', 'iconv charset', 'iconv')
-
-    def _configure_cmake(self):
-        cmake = CMake(self)
-        cmake.definitions['BUILD_SHARED_LIBS'] = False
-        cmake.definitions['CMAKE_SKIP_RPATH'] = True
-        cmake.definitions['CMAKE_POSITION_INDEPENDENT_CODE'] = \
-            self.options.get_safe('fPIC', default=False) or self.options.shared
-
-        if not self.options.shared:
-            cmake.definitions['DISABLE_LLVM_LINK_LLVM_DYLIB'] = True
-        # cmake.definitions['LLVM_LINK_DYLIB'] = self.options.shared
-
-        cmake.definitions['LLVM_TARGET_ARCH'] = 'host'
-        cmake.definitions['LLVM_TARGETS_TO_BUILD'] = self.options.targets
-        cmake.definitions['LLVM_BUILD_LLVM_DYLIB'] = self.options.shared
-        cmake.definitions['LLVM_DYLIB_COMPONENTS'] = self.options.components
-        cmake.definitions['LLVM_ENABLE_PIC'] = \
-            self.options.get_safe('fPIC', default=False)
-
-        if self.settings.compiler == 'Visual Studio':
-            build_type = str(self.settings.build_type).upper()
-            cmake.definitions['LLVM_USE_CRT_{}'.format(build_type)] = \
-                self.settings.compiler.runtime
-
-        cmake.definitions['LLVM_ABI_BREAKING_CHECKS'] = 'WITH_ASSERTS'
-        cmake.definitions['LLVM_ENABLE_WARNINGS'] = True
-        cmake.definitions['LLVM_ENABLE_PEDANTIC'] = True
-        cmake.definitions['LLVM_ENABLE_WERROR'] = False
-
-        cmake.definitions['LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN'] = True
-        cmake.definitions['LLVM_USE_RELATIVE_PATHS_IN_DEBUG_INFO'] = False
-        cmake.definitions['LLVM_BUILD_INSTRUMENTED_COVERAGE'] = False
-        cmake.definitions['LLVM_OPTIMIZED_TABLEGEN'] = True
-        cmake.definitions['LLVM_REVERSE_ITERATION'] = False
-        cmake.definitions['LLVM_ENABLE_BINDINGS'] = False
-        cmake.definitions['LLVM_CCACHE_BUILD'] = False
-
-        cmake.definitions['LLVM_INCLUDE_TOOLS'] = self.options.shared
-        cmake.definitions['LLVM_INCLUDE_EXAMPLES'] = False
-        cmake.definitions['LLVM_INCLUDE_TESTS'] = False
-        cmake.definitions['LLVM_INCLUDE_BENCHMARKS'] = False
-        cmake.definitions['LLVM_APPEND_VC_REV'] = False
-        cmake.definitions['LLVM_BUILD_DOCS'] = False
-        cmake.definitions['LLVM_ENABLE_IDE'] = False
-        cmake.definitions['LLVM_ENABLE_TERMINFO'] = False
-
-        cmake.definitions['LLVM_ENABLE_EH'] = self.options.exceptions
-        cmake.definitions['LLVM_ENABLE_RTTI'] = self.options.rtti
-        cmake.definitions['LLVM_ENABLE_THREADS'] = self.options.threads
-        cmake.definitions['LLVM_ENABLE_LTO'] = self.options.lto
-        cmake.definitions['LLVM_STATIC_LINK_CXX_STDLIB'] = \
-            self.options.static_stdlib
-        cmake.definitions['LLVM_ENABLE_UNWIND_TABLES'] = \
-            self.options.unwind_tables
-        cmake.definitions['LLVM_ENABLE_EXPENSIVE_CHECKS'] = \
-            self.options.expensive_checks
-        cmake.definitions['LLVM_ENABLE_ASSERTIONS'] = \
-            self.settings.build_type == 'Debug'
-
-        cmake.definitions['LLVM_USE_NEWPM'] = False
-        cmake.definitions['LLVM_USE_OPROFILE'] = False
-        cmake.definitions['LLVM_USE_PERF'] = self.options.use_perf
-        if self.options.use_sanitizer == 'None':
-            cmake.definitions['LLVM_USE_SANITIZER'] = ''
-        else:
-            cmake.definitions['LLVM_USE_SANITIZER'] = \
-                self.options.use_sanitizer
-
-        cmake.definitions['LLVM_ENABLE_Z3_SOLVER'] = False
-        cmake.definitions['LLVM_ENABLE_LIBPFM'] = False
-        cmake.definitions['LLVM_ENABLE_LIBEDIT'] = False
-        cmake.definitions['LLVM_ENABLE_FFI'] = self.options.with_ffi
-        cmake.definitions['LLVM_ENABLE_ZLIB'] = \
-            'FORCE_ON' if self.options.get_safe('with_zlib', False) else False
-        cmake.definitions['LLVM_ENABLE_LIBXML2'] = \
-            self.options.get_safe('with_xml2', False)
-        return cmake
+            replace_in_file(self, 'FindIconv.cmake', 'iconv charset', 'iconv')
 
     @property
     def _zlib_library_name(self):
         # The library's filename is different on Windows
-        return self.deps_cpp_info["zlib"].libs[0]
+        return self.dependencies["zlib"].cpp_info.libs[0]
 
     def config_options(self):
         if self.settings.os == 'Windows':
             del self.options.fPIC
             del self.options.with_xml2
+
+    def build_requirements(self):
+        self.tool_requires('cmake/3.27.9')  # Updated for conan-center availability
 
     def requirements(self):
         if self.options.with_ffi:
@@ -203,43 +131,114 @@ class LLVMCoreConan(ConanFile):
         if self.options.shared:  # Shared builds disabled just due to the CI
             message = 'Shared builds not currently supported'
             raise ConanInvalidConfiguration(message)
-            # del self.options.fPIC
-        # if self.settings.os == 'Windows' and self.options.shared:
-        #     message = 'Shared builds not supported on Windows'
-        #     raise ConanInvalidConfiguration(message)
         if self.options.exceptions and not self.options.rtti:
             message = 'Cannot enable exceptions without rtti support'
             raise ConanInvalidConfiguration(message)
         self._supports_compiler()
 
     def source(self):
-        tools.get(**self.conan_data['sources'][self.version], strip_root=True, destination=self._source_subfolder)
+        get(self, **self.conan_data['sources'][self.version], strip_root=True, destination=self._source_subfolder)
         self._patch_sources()
+
+    def generate(self):
+        tc = CMakeToolchain(self)
+        tc.variables['BUILD_SHARED_LIBS'] = False
+        tc.variables['CMAKE_SKIP_RPATH'] = True
+        tc.variables['CMAKE_POSITION_INDEPENDENT_CODE'] = \
+            self.options.get_safe('fPIC', default=False) or self.options.shared
+
+        if not self.options.shared:
+            tc.variables['DISABLE_LLVM_LINK_LLVM_DYLIB'] = True
+
+        tc.variables['LLVM_TARGET_ARCH'] = 'host'
+        tc.variables['LLVM_TARGETS_TO_BUILD'] = str(self.options.targets)
+        tc.variables['LLVM_BUILD_LLVM_DYLIB'] = self.options.shared
+        tc.variables['LLVM_DYLIB_COMPONENTS'] = str(self.options.components)
+        tc.variables['LLVM_ENABLE_PIC'] = \
+            self.options.get_safe('fPIC', default=False)
+
+        if self.settings.compiler == 'Visual Studio':
+            build_type = str(self.settings.build_type).upper()
+            tc.variables['LLVM_USE_CRT_{}'.format(build_type)] = \
+                str(self.settings.compiler.runtime)
+
+        tc.variables['LLVM_ABI_BREAKING_CHECKS'] = 'WITH_ASSERTS'
+        tc.variables['LLVM_ENABLE_WARNINGS'] = True
+        tc.variables['LLVM_ENABLE_PEDANTIC'] = True
+        tc.variables['LLVM_ENABLE_WERROR'] = False
+
+        tc.variables['LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN'] = True
+        tc.variables['LLVM_USE_RELATIVE_PATHS_IN_DEBUG_INFO'] = False
+        tc.variables['LLVM_BUILD_INSTRUMENTED_COVERAGE'] = False
+        tc.variables['LLVM_OPTIMIZED_TABLEGEN'] = True
+        tc.variables['LLVM_REVERSE_ITERATION'] = False
+        tc.variables['LLVM_ENABLE_BINDINGS'] = False
+        tc.variables['LLVM_CCACHE_BUILD'] = False
+
+        tc.variables['LLVM_INCLUDE_TOOLS'] = self.options.shared
+        tc.variables['LLVM_INCLUDE_EXAMPLES'] = False
+        tc.variables['LLVM_INCLUDE_TESTS'] = False
+        tc.variables['LLVM_INCLUDE_BENCHMARKS'] = False
+        tc.variables['LLVM_APPEND_VC_REV'] = False
+        tc.variables['LLVM_BUILD_DOCS'] = False
+        tc.variables['LLVM_ENABLE_IDE'] = False
+        tc.variables['LLVM_ENABLE_TERMINFO'] = False
+
+        tc.variables['LLVM_ENABLE_EH'] = self.options.exceptions
+        tc.variables['LLVM_ENABLE_RTTI'] = self.options.rtti
+        tc.variables['LLVM_ENABLE_THREADS'] = self.options.threads
+        tc.variables['LLVM_ENABLE_LTO'] = str(self.options.lto)
+        tc.variables['LLVM_STATIC_LINK_CXX_STDLIB'] = \
+            self.options.static_stdlib
+        tc.variables['LLVM_ENABLE_UNWIND_TABLES'] = \
+            self.options.unwind_tables
+        tc.variables['LLVM_ENABLE_EXPENSIVE_CHECKS'] = \
+            self.options.expensive_checks
+        tc.variables['LLVM_ENABLE_ASSERTIONS'] = \
+            self.settings.build_type == 'Debug'
+
+        tc.variables['LLVM_USE_NEWPM'] = False
+        tc.variables['LLVM_USE_OPROFILE'] = False
+        tc.variables['LLVM_USE_PERF'] = self.options.use_perf
+        if self.options.use_sanitizer == 'None':
+            tc.variables['LLVM_USE_SANITIZER'] = ''
+        else:
+            tc.variables['LLVM_USE_SANITIZER'] = \
+                str(self.options.use_sanitizer)
+
+        tc.variables['LLVM_ENABLE_Z3_SOLVER'] = False
+        tc.variables['LLVM_ENABLE_LIBPFM'] = False
+        tc.variables['LLVM_ENABLE_LIBEDIT'] = False
+        tc.variables['LLVM_ENABLE_FFI'] = self.options.with_ffi
+        tc.variables['LLVM_ENABLE_ZLIB'] = \
+            'FORCE_ON' if self.options.get_safe('with_zlib', False) else False
+        tc.variables['LLVM_ENABLE_LIBXML2'] = \
+            self.options.get_safe('with_xml2', False)
+        tc.generate()
 
     def build(self):
         self._patch_build()
-        cmake = self._configure_cmake()
-        cmake.configure()
+        cmake = CMake(self)
+        cmake.configure(build_script_folder=os.path.join(self.source_folder, self._source_subfolder))
         cmake.build()
 
     def package(self):
-        self.copy('LICENSE.TXT', dst='licenses', src=self._source_subfolder)
+        copy(self, 'LICENSE.TXT', src=os.path.join(self.source_folder, self._source_subfolder), dst=os.path.join(self.package_folder, 'licenses'))
         lib_path = os.path.join(self.package_folder, 'lib')
 
-        cmake = self._configure_cmake()
+        cmake = CMake(self)
         cmake.install()
-
 
         if not self.options.shared:
             for ext in ['.a', '.lib']:
                 lib = '**/lib/*LLVMTableGenGlobalISel{}'.format(ext)
-                self.copy(lib, dst='lib', keep_path=False)
+                copy(self, lib, src=self.build_folder, dst=os.path.join(self.package_folder, 'lib'), keep_path=False)
                 lib = '*LLVMTableGenGlobalISel{}'.format(ext)
-                self.copy(lib, dst='lib', src='lib')
+                copy(self, lib, src=os.path.join(self.build_folder, 'lib'), dst=os.path.join(self.package_folder, 'lib'))
 
             self.run('cmake --graphviz=graph/llvm.dot .')
-            with tools.chdir('graph'):
-                dot_text = tools.load('llvm.dot').replace('\r\n', '\n')
+            with chdir(self, 'graph'):
+                dot_text = load(self, 'llvm.dot').replace('\r\n', '\n')
 
             dep_regex = re.compile(r'//\s(.+)\s->\s(.+)$', re.MULTILINE)
             deps = re.findall(dep_regex, dot_text)
@@ -248,7 +247,6 @@ class LLVMCoreConan(ConanFile):
             for target, dep in deps:
                 if not target.startswith('LLVM'):
                     dummy_targets[target].append(dep)
-
 
             cmake_targets = {
                 'libffi::libffi': 'ffi',
@@ -278,9 +276,9 @@ class LLVMCoreConan(ConanFile):
                 else:
                     components[lib].append(dep)
 
-        tools.rmdir(os.path.join(self.package_folder, 'bin'))
-        tools.rmdir(os.path.join(self.package_folder, 'lib', 'cmake'))
-        tools.rmdir(os.path.join(self.package_folder, 'share'))
+        rmdir(self, os.path.join(self.package_folder, 'bin'))
+        rmdir(self, os.path.join(self.package_folder, 'lib', 'cmake'))
+        rmdir(self, os.path.join(self.package_folder, 'share'))
 
         for name in os.listdir(lib_path):
             if 'LLVM' not in name:
@@ -289,7 +287,7 @@ class LLVMCoreConan(ConanFile):
         if not self.options.shared:
             if self.options.get_safe('with_zlib', False):
                 if not self._zlib_library_name in components['LLVMSupport']:
-                    components['LLVMSupport'].append(self.zlib_library_name)
+                    components['LLVMSupport'].append(self._zlib_library_name)
             components_path = \
                 os.path.join(self.package_folder, 'lib', 'components.json')
             with open(components_path, 'w') as components_file:
@@ -302,7 +300,7 @@ class LLVMCoreConan(ConanFile):
 
     def package_info(self):
         if self.options.shared:
-            self.cpp_info.libs = tools.collect_libs(self)
+            self.cpp_info.libs = collect_libs(self)
             if self.settings.os == 'Linux':
                 self.cpp_info.system_libs = ['pthread', 'rt', 'dl', 'm']
             elif self.settings.os == 'Macos':

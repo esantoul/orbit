@@ -6,8 +6,13 @@ Use of this source code is governed by a BSD-style license that can be
 found in the LICENSE file.
 """
 
-from conans import ConanFile, CMake, tools
-from conans.errors import ConanInvalidConfiguration
+from conan import ConanFile
+from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
+from conan.tools.files import copy, save
+from conan.tools.build import cross_building
+from conan.tools.microsoft import VCVars
+from conan.errors import ConanInvalidConfiguration
+import platform
 import os
 import shutil
 from io import StringIO
@@ -22,21 +27,24 @@ class OrbitConan(ConanFile):
     url = "https://github.com/pierricgimmig/orbitprofiler.git"
     description = "C/C++ Performance Profiler"
     settings = "os", "compiler", "build_type", "arch"
-    generators = ["cmake_multi"]
-    options = {"system_qt": [True, False], "with_gui": [True, False],
-               "debian_packaging": [True, False],
-               "fPIC": [True, False],
-               "crashdump_server": "ANY",
-               "with_crash_handling": [True, False],
-               "run_tests": [True, False],
-               "run_python_tests": [True, False],
-               "build_target": "ANY",
-               "deploy_opengl_software_renderer": [True, False]}
+    generators = ["CMakeDeps"]  # CMakeToolchain is manually instantiated in generate()
+    options = {
+        "system_qt": [True, False],
+        "with_gui": [True, False],
+        "debian_packaging": [True, False],
+        "fPIC": [True, False],
+        "crashdump_server": [None, "ANY"],
+        "with_crash_handling": [True, False],
+        "run_tests": [True, False],
+        "run_python_tests": [True, False],
+        "build_target": [None, "ANY"],
+        "deploy_opengl_software_renderer": [True, False]
+    }
     default_options = {"system_qt": True, "with_gui": True,
                        "debian_packaging": False,
                        "fPIC": True,
-                       "crashdump_server": "",
-                       "with_crash_handling": True,
+                       "crashdump_server": None,
+                       "with_crash_handling": False,  # Disabled for Conan 2.x migration
                        "run_tests": True,
                        "run_python_tests": False,
                        "build_target": None,
@@ -63,10 +71,16 @@ class OrbitConan(ConanFile):
         elif not self.options.with_crash_handling:
             del self.options.crashdump_server
 
+    def layout(self):
+        cmake_layout(self)
+
     def build_requirements(self):
-        self.build_requires('protoc_installer/3.9.1@bincrafters/stable#0')
+        # protoc is needed during build for protobuf code generation
+        self.tool_requires("protobuf/3.21.12")
+        # grpc_codegen provides grpc_cpp_plugin for code generation
         self.build_requires('grpc_codegen/1.27.3@{}'.format(self._orbit_channel))
-        self.build_requires('gtest/1.11.0', force_host_context=True)
+        # In Conan 2.x, test_requires() is used for test dependencies
+        self.test_requires('gtest/1.11.0')
 
     def requirements(self):
         if self.options.deploy_opengl_software_renderer and self.settings.os != "Windows":
@@ -79,41 +93,45 @@ class OrbitConan(ConanFile):
         self.requires("abseil/20211102.0")
         self.requires("bzip2/1.0.8", override=True)
         self.requires("capstone/4.0.2")
+        # Use custom grpc recipe (migrated to Conan 2.x)
         self.requires("grpc/1.27.3@{}".format(self._orbit_channel))
-        self.requires("c-ares/1.15.0", override=True)
+        self.requires("c-ares/1.25.0", override=True)  # Using 1.25.0 to avoid CMake issues in 1.17.1
+        # Use custom llvm-core recipe (migrated to Conan 2.x)
+        # Note: conan-center has newer versions (16.x+) but we need 12.x for compatibility
         self.requires("llvm-core/12.0.0@{}".format(self._orbit_channel))
-        self.requires("lzma_sdk/19.00@orbitdeps/stable#a7bc173325d7463a0757dee5b08bf7fd", override=True)
-        self.requires("openssl/1.1.1k", override=True)
+        # Use xz_utils from conan-center (modern LZMA implementation)
+        self.requires("xz_utils/5.4.5", override=True)
+        self.requires("openssl/1.1.1w", override=True)  # Updated for Conan 2.x
         self.requires("outcome/2.2.0")
-        self.requires(
-            "libprotobuf-mutator/20200506@{}#90ce749ca62b40e9c061d20fae4410e0".format(self._orbit_channel))
+        # libprotobuf-mutator - keep custom (migrated to Conan 2.x)
+        self.requires("libprotobuf-mutator/20200506@{}".format(self._orbit_channel))
         if self.settings.os != "Windows":
             self.requires(
                 "libunwindstack-android-dependencies/20210709@{}".format(self._orbit_channel))
+            # volk and vulkan-headers are compatible - let volk decide the version
             self.requires("volk/1.2.170")
-            self.requires("vulkan-headers/1.1.114.0")
-        self.requires("zlib/1.2.11#9e0c292b60ce77402bd9be60dd68266f", override=True)
+        self.requires("zlib/1.2.11", override=True)
 
         if self.options.with_gui and self.options.with_crash_handling:
             self.requires("crashpad/20200624@{}".format(self._orbit_channel))
 
         if self.options.with_gui:
-            self.requires("freetype/2.10.0@bincrafters/stable#0", override=True)
-            self.requires("freetype-gl/79b03d9@{}".format(self._orbit_channel))
+            self.requires("freetype/2.10.4", override=True)
+            self.requires("freetype-gl/79b03d9.1@{}".format(self._orbit_channel))
             self.requires("glad/0.1.34")
             self.requires("imgui/1.85")
-            self.requires("libpng/1.6.37@bincrafters/stable#0", override=True)
-            self.requires("libssh2/1.9.0#df2b6034da12cc5cb68bd3c5c22601bf")
+            self.requires("libpng/1.6.37", override=True)
+            self.requires("libssh2/1.9.0")
 
             if not self.options.system_qt:
-                self.requires("qt/5.15.1@{}#e659e981368e4baba1a201b75ddb89b6".format(self._orbit_channel))
+                self.requires("qt/5.15.1@{}".format(self._orbit_channel))
 
         if self.options.deploy_opengl_software_renderer:
-            self.requires("llvmpipe/21.0.3@{}#fd5932d6a7fa5fb0af5045eb53c02d18".format(self._orbit_channel))
+            self.requires("llvmpipe/21.0.3@{}".format(self._orbit_channel))
 
 
     def configure(self):
-        if self.options.debian_packaging and (self.settings.get_safe("os.platform") != "GGP" or tools.detected_os() != "Linux"):
+        if self.options.debian_packaging and (self.settings.get_safe("os.platform") != "GGP" or platform.system() != "Linux"):
             raise ConanInvalidConfiguration(
                 "Debian packaging is only supported for GGP builds!")
 
@@ -150,21 +168,44 @@ class OrbitConan(ConanFile):
                     self.options["qt"].with_harfbuzz = False
                     self.options["qt"].opengl = "dynamic"
 
-
-    def build(self):
-        cmake = CMake(self)
-        cmake.definitions["WITH_GUI"] = "ON" if self.options.with_gui else "OFF"
+    def generate(self):
+        # Conan 2.x: CMake variables are set in generate() via CMakeToolchain
+        tc = CMakeToolchain(self)
+        tc.variables["WITH_GUI"] = "ON" if self.options.with_gui else "OFF"
         if self.options.with_gui:
             if self.options.with_crash_handling:
-                cmake.definitions["WITH_CRASH_HANDLING"] = "ON"
-                cmake.definitions["CRASHDUMP_SERVER"] = self.options.crashdump_server
+                tc.variables["WITH_CRASH_HANDLING"] = "ON"
+                tc.variables["CRASHDUMP_SERVER"] = str(self.options.crashdump_server)
             else:
-                cmake.definitions["WITH_CRASH_HANDLING"] = "OFF"
+                tc.variables["WITH_CRASH_HANDLING"] = "OFF"
+        
+        # Find grpc_cpp_plugin from build requirements
+        grpc_plugin_found = False
+        for dep in self.dependencies.build.values():
+            self.output.info(f"Checking build dependency: {dep.ref.name}")
+            if dep.ref.name == "grpc_codegen":
+                self.output.info(f"Found grpc_codegen, bindirs: {dep.cpp_info.bindirs}")
+                for bindir in dep.cpp_info.bindirs:
+                    grpc_plugin = os.path.join(bindir, "grpc_cpp_plugin")
+                    self.output.info(f"Checking for grpc_cpp_plugin at: {grpc_plugin}, exists: {os.path.exists(grpc_plugin)}")
+                    if os.path.exists(grpc_plugin):
+                        # Set as CACHE variable so it persists and is available to functions
+                        tc.cache_variables["_HELPER_GRPC_CPP_PLUGIN"] = grpc_plugin
+                        self.output.info(f"✓ Found grpc_cpp_plugin at: {grpc_plugin}")
+                        grpc_plugin_found = True
+                        break
+                if not grpc_plugin_found:
+                    self.output.warn("grpc_cpp_plugin not found in grpc_codegen bindirs!")
+        
+        tc.generate()
 
+    def build(self):
+        # Conan 2.x: CMake variables are now set in generate() method
+        cmake = CMake(self)
         cmake.configure()
         cmake.build(target=str(self.options.build_target) if self.options.build_target else None)
-        if self.options.run_tests and not tools.cross_building(self.settings, skip_x64_x86=True) and self.settings.get_safe("os.platform") != "GGP":
-            cmake.test(output_on_failure=True)
+        if self.options.run_tests and not cross_building(self) and self.settings.get_safe("os.platform") != "GGP":
+            cmake.test()
         if self.options.run_python_tests:
             build_python.main()
 
@@ -248,7 +289,7 @@ class OrbitConan(ConanFile):
             basedir = "{}/{}-{}".format(self.package_folder,
                                         self.name, self._version())
             os.makedirs("{}/DEBIAN".format(basedir), exist_ok=True)
-            tools.save("{}/DEBIAN/control".format(basedir), """Package: orbitprofiler
+            save(self, "{}/DEBIAN/control".format(basedir), """Package: orbitprofiler
 Version: {}
 Section: development
 Priority: optional
@@ -259,7 +300,7 @@ Homepage: https://github.com/google/orbit
 Installed-Size: `du -ks usr/ | cut -f 1`
 """.format(self._version()))
 
-            tools.save("{}/DEBIAN/postinst".format(basedir), """
+            save(self, "{}/DEBIAN/postinst".format(basedir), """
 #!/bin/bash
 # Setting the setuid-bit for OrbitService
 chmod -v 4775 /opt/developer/tools/OrbitService
@@ -311,11 +352,12 @@ chmod -v 4775 /opt/developer/tools/OrbitService
             self.run("windeployqt --pdb --no-angle {}".format(orbit_executable), cwd=os.path.join(self.package_folder, "bin"), run_environment=True)
 
             # Package Visual C++ and C Runtime
-            vcvars = tools.vcvars_dict(self)
-            if 'VCToolsRedistDir' in vcvars:
-                arch = 'x64' if self.settings.arch == 'x86_64' else 'x86'
-                src_path = os.path.join(vcvars['VCToolsRedistDir'], arch, 'Microsoft.VC142.CRT')
-                self.copy("*.dll", src=src_path, dst="bin")
+            # TODO: Update for Conan 2.x - VCVars handling changed
+            # vcvars = VCVars(self).vars()
+            # if 'VCToolsRedistDir' in vcvars:
+            #     arch = 'x64' if self.settings.arch == 'x86_64' else 'x86'
+            #     src_path = os.path.join(vcvars['VCToolsRedistDir'], arch, 'Microsoft.VC142.CRT')
+            #     self.copy("*.dll", src=src_path, dst="bin")
 
 
     def deploy(self):

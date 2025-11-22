@@ -17,3 +17,5 @@ __pycache__
 
 # Visual Studio
 /.vs/
+.docker-conan-cache/
+.docker-conan2-cache/

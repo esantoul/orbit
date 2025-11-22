@@ -50,8 +50,8 @@ target_link_libraries(UserSpaceInstrumentation PUBLIC
         ModuleUtils
         ObjectUtils
         OrbitBase
-        CONAN_PKG::abseil
-        CONAN_PKG::capstone)
+        abseil::abseil
+        capstone::capstone)
 
 # This lib is injected into the target process Orbit is profiling. It is providing the functions
 # executed on function entry/exit of an instrumented function.
@@ -124,9 +124,13 @@ target_sources(UserSpaceInstrumentationTests PRIVATE
 target_link_libraries(UserSpaceInstrumentationTests PRIVATE
         TestUtils
         UserSpaceInstrumentation
-        CONAN_PKG::abseil
-        CONAN_PKG::capstone
-        GTest::GTest
+        abseil::abseil
+        capstone::capstone
+        GTest::gtest
+  GTest::gmock
         GTest::Main)
+
+# TrampolineTest.cpp uses AVX2 intrinsics, so we need to enable AVX2 support
+set_source_files_properties(TrampolineTest.cpp PROPERTIES COMPILE_FLAGS "-mavx2")
 
 register_test(UserSpaceInstrumentationTests)

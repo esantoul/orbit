@@ -11,8 +11,8 @@
 
 namespace orbit_code_report {
 
-static std::vector<std::string_view> SplitIntoLines(std::string_view source_file_contents) {
-  std::vector<std::string_view> source_file_lines = absl::StrSplit(source_file_contents, '\n');
+static std::vector<std::string> SplitIntoLines(std::string_view source_file_contents) {
+  std::vector<std::string> source_file_lines = absl::StrSplit(absl::string_view(source_file_contents.data(), source_file_contents.size()), "\n");
   for (auto& line : source_file_lines) {
     if (!line.empty() && line.back() == '\r') line = line.substr(0, line.size() - 1);
   }
@@ -24,7 +24,7 @@ static std::vector<std::string_view> SplitIntoLines(std::string_view source_file
     const orbit_client_data::FunctionInfo& function_info,
     const orbit_grpc_protos::LineInfo& location_info, std::string_view source_file_contents,
     orbit_object_utils::ElfFile* elf, const DisassemblyReport& report) {
-  const std::vector<std::string_view> source_file_lines = SplitIntoLines(source_file_contents);
+  const std::vector<std::string> source_file_lines = SplitIntoLines(source_file_contents);
 
   // We will show each source code line above the first related instruction
   absl::flat_hash_map<size_t, uint64_t> source_line_to_first_instruction_offset;

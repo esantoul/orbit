@@ -41,12 +41,13 @@ ErrorMessageOr<void> UpdateSystemMemoryUsageFromMemInfo(std::string_view meminfo
                                                         SystemMemoryUsage* system_memory_usage) {
   if (meminfo_content.empty()) return ErrorMessage("Empty file content.");
 
-  std::vector<std::string> lines = absl::StrSplit(meminfo_content, '\n', absl::SkipEmpty());
+  std::vector<std::string> lines = absl::StrSplit(absl::string_view(meminfo_content.data(), meminfo_content.size()), "\n");
   constexpr size_t kNumLines = 5;
   std::vector<std::string> top_lines(
       lines.begin(), lines.begin() + (lines.size() > kNumLines ? kNumLines : lines.size()));
   std::string error_message;
-  for (std::string_view line : top_lines) {
+  for (std::string_view line_std : top_lines) {
+    absl::string_view line(line_std.data(), line_std.size());
     // Each line of the /proc/meminfo file consists of a parameter name, followed by a colon, the
     // value of the parameter, and an option unit of measurement (e.g., "kB"). According to the
     // kernel code https://github.com/torvalds/linux/blob/master/fs/proc/meminfo.c, the size unit in
@@ -54,15 +55,15 @@ ErrorMessageOr<void> UpdateSystemMemoryUsageFromMemInfo(std::string_view meminfo
     // definition in http://en.wikipedia.org/wiki/Kilobyte. We keep consistent with the definition
     // in /proc/meminfo: we report in "kB" and consider 1 kB = 1 KiloBytes = 1024 Bytes.
     // If the line format is wrong or the unit size isn't "kB", SystemMemoryUsage won't be updated.
-    std::vector<std::string> splits = absl::StrSplit(line, ' ', absl::SkipWhitespace{});
+    std::vector<std::string> splits = absl::StrSplit(line, " ");
     if (splits.size() < 3 || splits[2] != "kB") {
-      absl::StrAppend(&error_message, "Wrong format in line: ", line, "\n");
+      absl::StrAppend(&error_message, "Wrong format in line: ", std::string(line), "\n");
       continue;
     }
 
     int64_t memory_size_value;
     if (!absl::SimpleAtoi(splits[1], &memory_size_value)) {
-      absl::StrAppend(&error_message, "Fail to extract value in line: ", line, "\n");
+      absl::StrAppend(&error_message, "Fail to extract value in line: ", std::string(line), "\n");
       continue;
     }
 
@@ -87,20 +88,21 @@ ErrorMessageOr<void> UpdateSystemMemoryUsageFromVmStat(std::string_view vmstat_c
                                                        SystemMemoryUsage* system_memory_usage) {
   if (vmstat_content.empty()) return ErrorMessage("Empty file content.");
 
-  std::vector<std::string> lines = absl::StrSplit(vmstat_content, '\n', absl::SkipEmpty());
+  std::vector<std::string> lines = absl::StrSplit(absl::string_view(vmstat_content.data(), vmstat_content.size()), "\n");
   std::string error_message;
-  for (std::string_view line : lines) {
+  for (std::string_view line_std : lines) {
+    absl::string_view line(line_std.data(), line_std.size());
     // Each line of the /proc/vmstat file consists a single name-value pair, delimited by white
     // space. In /proc/vmstat, the pgfault and pgmajfault fields report cumulative values.
-    std::vector<std::string> splits = absl::StrSplit(line, ' ', absl::SkipWhitespace{});
+    std::vector<std::string> splits = absl::StrSplit(line, " ");
     if (splits.size() < 2) {
-      absl::StrAppend(&error_message, "Wrong format in line: ", line, "\n");
+      absl::StrAppend(&error_message, "Wrong format in line: ", std::string(line), "\n");
       continue;
     }
 
     int64_t value;
     if (!absl::SimpleAtoi(splits[1], &value)) {
-      absl::StrAppend(&error_message, "Fail to extract value in line: ", line, "\n");
+      absl::StrAppend(&error_message, "Fail to extract value in line: ", std::string(line), "\n");
       continue;
     }
 
@@ -167,7 +169,7 @@ ErrorMessageOr<void> UpdateProcessMemoryUsageFromProcessStat(
   //   Field index | Name   | Format | Meaning
   //    10         | minflt | %lu    | # of minor faults the process has made
   //    12         | majflt | %lu    | # of major faults the process has made
-  std::vector<std::string> splits = absl::StrSplit(stat_content, ' ', absl::SkipWhitespace{});
+  std::vector<std::string> splits = absl::StrSplit(absl::string_view(stat_content.data(), stat_content.size()), " ");
   if (splits.size() != 52) {
     return ErrorMessage(absl::StrFormat("Wrong format: only %d fields", splits.size()));
   }
@@ -193,13 +195,14 @@ ErrorMessageOr<void> UpdateProcessMemoryUsageFromProcessStat(
 ErrorMessageOr<int64_t> ExtractRssAnonFromProcessStatus(std::string_view status_content) {
   if (status_content.empty()) return ErrorMessage("Empty file content.");
 
-  std::vector<std::string> lines = absl::StrSplit(status_content, '\n', absl::SkipEmpty());
-  for (std::string_view line : lines) {
+  std::vector<std::string> lines = absl::StrSplit(absl::string_view(status_content.data(), status_content.size()), "\n");
+  for (std::string_view line_std : lines) {
+    absl::string_view line(line_std.data(), line_std.size());
     std::vector<std::string> splits =
-        absl::StrSplit(line, absl::ByAnyChar(": \t"), absl::SkipWhitespace{});
+        absl::StrSplit(line, absl::ByAnyChar(": \t"));
     if (splits[0] == "RssAnon") {
       if (splits.size() < 3 || splits[2] != "kB") {
-        return ErrorMessage(absl::StrFormat("Wrong format in line: %s\n", line));
+        return ErrorMessage(absl::StrFormat("Wrong format in line: %s\n", std::string(line)));
       }
 
       int64_t value;
@@ -269,8 +272,9 @@ CGroupMemoryUsage CreateAndInitializeCGroupMemoryUsage() {
 std::string GetProcessMemoryCGroupName(std::string_view cgroup_content) {
   if (cgroup_content.empty()) return "";
 
-  std::vector<std::string> lines = absl::StrSplit(cgroup_content, '\n', absl::SkipEmpty());
-  for (std::string_view line : lines) {
+  std::vector<std::string> lines = absl::StrSplit(absl::string_view(cgroup_content.data(), cgroup_content.size()), "\n");
+  for (std::string_view line_std : lines) {
+    absl::string_view line(line_std.data(), line_std.size());
     std::vector<std::string> splits = absl::StrSplit(line, absl::MaxSplits(':', 2));
     // If we find the memory cgroup, return the cgroup name without the leading "/".
     if (splits.size() == 3 && splits[1] == "memory") return splits[2].substr(1);
@@ -285,7 +289,7 @@ ErrorMessageOr<void> UpdateCGroupMemoryUsageFromMemoryLimitInBytes(
 
   // The memory.limit_in_bytes file use "bytes" as the size unit.
   int64_t memory_limit_in_bytes;
-  if (absl::SimpleAtoi(memory_limit_in_bytes_content, &memory_limit_in_bytes)) {
+  if (absl::SimpleAtoi(absl::string_view(memory_limit_in_bytes_content.data(), memory_limit_in_bytes_content.size()), &memory_limit_in_bytes)) {
     cgroup_memory_usage->set_limit_bytes(memory_limit_in_bytes);
     return outcome::success();
   } else {
@@ -298,21 +302,22 @@ ErrorMessageOr<void> UpdateCGroupMemoryUsageFromMemoryStat(std::string_view memo
                                                            CGroupMemoryUsage* cgroup_memory_usage) {
   if (memory_stat_content.empty()) return ErrorMessage("Empty file content.");
 
-  std::vector<std::string> lines = absl::StrSplit(memory_stat_content, '\n', absl::SkipEmpty());
+  std::vector<std::string> lines = absl::StrSplit(absl::string_view(memory_stat_content.data(), memory_stat_content.size()), "\n");
   std::string error_message;
-  for (std::string_view line : lines) {
-    std::vector<std::string> splits = absl::StrSplit(line, ' ', absl::SkipWhitespace{});
+  for (std::string_view line_std : lines) {
+    absl::string_view line(line_std.data(), line_std.size());
+    std::vector<std::string> splits = absl::StrSplit(line, " ");
     // According to the document https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt:
     // Each line of the memory.stat file consists of a parameter name, followed by a whitespace,
     // and the value of the parameter. Also the memory size unit is fixed to "bytes".
     if (splits.size() < 2) {
-      absl::StrAppend(&error_message, "Wrong format in line: ", line, "\n");
+      absl::StrAppend(&error_message, "Wrong format in line: ", std::string(line), "\n");
       continue;
     }
 
     int64_t value;
     if (!absl::SimpleAtoi(splits[1], &value)) {
-      absl::StrAppend(&error_message, "Fail to extract value in line: ", line, "\n");
+      absl::StrAppend(&error_message, "Fail to extract value in line: ", std::string(line), "\n");
       continue;
     }
 

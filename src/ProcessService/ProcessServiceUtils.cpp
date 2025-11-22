@@ -104,8 +104,8 @@ std::optional<Jiffies> GetCumulativeCpuTimeFromProcess(pid_t pid) {
   std::string_view first_line_excl_pid_comm =
       std::string_view{first_line}.substr(last_closed_paren_index + 1);
 
-  std::vector<std::string_view> fields_excl_pid_comm =
-      absl::StrSplit(first_line_excl_pid_comm, ' ', absl::SkipWhitespace{});
+  std::vector<std::string> fields_excl_pid_comm =
+      absl::StrSplit(absl::string_view(first_line_excl_pid_comm.data(), first_line_excl_pid_comm.size()), ' ');
 
   constexpr size_t kCommIndex = 1;
   constexpr size_t kUtimeIndex = 13;
@@ -189,12 +189,12 @@ std::optional<TotalCpuTime> GetCumulativeTotalCpuTime() {
     return std::nullopt;
   }
 
-  std::vector<std::string_view> splits = absl::StrSplit(first_line, ' ', absl::SkipWhitespace{});
+  std::vector<std::string> splits = absl::StrSplit(absl::string_view(first_line.data(), first_line.size()), ' ');
 
   const Jiffies jiffies{
       std::accumulate(splits.begin() + 1, splits.end(), 0ul, [](auto sum, const auto& str) {
         int potential_time = 0;
-        if (absl::SimpleAtoi(str, &potential_time)) {
+        if (absl::SimpleAtoi(absl::string_view(str.data(), str.size()), &potential_time)) {
           sum += potential_time;
         }
 

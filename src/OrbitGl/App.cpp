@@ -292,7 +292,7 @@ ErrorMessageOr<std::optional<std::filesystem::path>> GetOverrideSymbolFileForMod
     std::vector<const ModuleData*>* modules, std::string_view path_substring) {
   auto module_it =
       std::find_if(modules->begin(), modules->end(), [path_substring](const ModuleData* module) {
-        return absl::StrContains(module->file_path(), path_substring);
+        return absl::StrContains(module->file_path(), std::string(path_substring));
       });
   if (module_it == modules->end()) return std::nullopt;
 

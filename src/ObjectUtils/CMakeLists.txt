@@ -46,8 +46,8 @@ target_link_libraries(
   PUBLIC GrpcProtos
          OrbitBase
          Introspection
-         CONAN_PKG::abseil
-         CONAN_PKG::llvm-core)
+         abseil::abseil
+         llvm-core::llvm-core)
 
 if (WIN32)
 target_link_libraries(ObjectUtils PUBLIC DIASDK::DIASDK)
@@ -77,8 +77,8 @@ target_link_libraries(
   PRIVATE ObjectUtils
           TestUtils
           GTest::Main
-          CONAN_PKG::llvm-core
-          CONAN_PKG::abseil)
+          llvm-core::llvm-core
+          abseil::abseil)
 
 register_test(ObjectUtilsTests)
 

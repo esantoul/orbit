@@ -9,13 +9,16 @@
 #include <absl/strings/str_join.h>
 #include <absl/types/span.h>
 
+#include <QHash>
 #include <QVector>
 #include <algorithm>
 #include <cstddef>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <optional>
 #include <tuple>
+#include <unordered_map>
 #include <utility>
 
 #include "MetricsUploader/ScopedMetric.h"
@@ -53,12 +56,25 @@ class RetrieveInstancesImpl : public RetrieveInstances {
   }
 
  private:
+  // Custom hash function for the cache key
+  struct CacheKeyHash {
+    size_t operator()(const std::pair<std::optional<orbit_ggp::Project>,
+                                       orbit_ggp::Client::InstanceListScope>& key) const {
+      size_t h1 = 0;
+      if (key.first.has_value()) {
+        h1 = qHash(key.first->id) ^ qHash(key.first->display_name);
+      }
+      size_t h2 = std::hash<int>{}(static_cast<int>(key.second));
+      return h1 ^ (h2 << 1);
+    }
+  };
+
   orbit_ggp::Client* ggp_client_ = nullptr;
   // To avoid race conditions to the instance_cache_, the main thread is used.
   orbit_base::MainThreadExecutor* main_thread_executor_ = nullptr;
-  absl::flat_hash_map<
+  std::unordered_map<
       std::pair<std::optional<orbit_ggp::Project>, orbit_ggp::Client::InstanceListScope>,
-      QVector<orbit_ggp::Instance>>
+      QVector<orbit_ggp::Instance>, CacheKeyHash>
       instance_cache_;
   orbit_metrics_uploader::MetricsUploader* metrics_uploader_ = nullptr;
 };
@@ -78,11 +94,12 @@ RetrieveInstancesImpl::RetrieveInstancesImpl(Client* ggp_client,
 Future<ErrorMessageOr<QVector<Instance>>> RetrieveInstancesImpl::LoadInstances(
     const std::optional<Project>& project, orbit_ggp::Client::InstanceListScope scope) {
   auto key = std::make_pair(project, scope);
-  if (instance_cache_.contains(key)) {
+  auto it = instance_cache_.find(key);
+  if (it != instance_cache_.end()) {
     if (metrics_uploader_ != nullptr) {
       metrics_uploader_->SendLogEvent(OrbitLogEvent::ORBIT_INSTANCES_CACHE_HIT);
     }
-    return Future<ErrorMessageOr<QVector<Instance>>>{instance_cache_.at(key)};
+    return Future<ErrorMessageOr<QVector<Instance>>>{it->second};
   }
   return LoadInstancesWithoutCache(project, scope);
 }

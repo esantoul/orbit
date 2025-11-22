@@ -70,8 +70,8 @@ std::optional<char> GetThreadState(pid_t tid) {
   std::string_view first_line_excl_pid_comm =
       std::string_view{first_line}.substr(last_closed_paren_index + 1);
 
-  std::vector<std::string_view> fields_excl_pid_comm =
-      absl::StrSplit(first_line_excl_pid_comm, ' ', absl::SkipWhitespace{});
+  std::vector<std::string> fields_excl_pid_comm =
+      absl::StrSplit(absl::string_view(first_line_excl_pid_comm.data(), first_line_excl_pid_comm.size()), ' ');
 
   constexpr size_t kCommIndex = 1;
   constexpr size_t kStateIndex = 2;
@@ -347,14 +347,15 @@ absl::flat_hash_map<pid_t, pid_t> RetrieveInitialTidToRootNamespaceTidMapping(
     }
     const std::vector<std::string> lines =
         absl::StrSplit(reading_result.value(), '\n', absl::SkipEmpty());
-    for (std::string_view line : lines) {
+    for (std::string_view line_std : lines) {
+      absl::string_view line(line_std.data(), line_std.size());
       if (!absl::StartsWith(line, "NSpid:")) continue;
       // The line in the status file looks like this:
       // NSpid:  pid pid_1 ... pid_n
       // where pid is the pid in the root namespace, pid_1 is the pid in the first nested namespace
       // and pid_n is the pid in the innermost namespace.
       const std::vector<std::string> splits =
-          absl::StrSplit(line, absl::ByAnyChar(": \t"), absl::SkipWhitespace{});
+          absl::StrSplit(line, absl::ByAnyChar(": \t"));
       pid_t tid_in_target_process_namespace = 0;
       if (!absl::SimpleAtoi(splits.back(), &tid_in_target_process_namespace)) {
         ORBIT_ERROR("Line in %s starting with 'NSpid:' did not end with a pid. Entire line was: %s",

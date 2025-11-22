@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.15)
 project(libunwindstack CXX C ASM)
 set(CMAKE_CXX_STANDARD 17)
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup(TARGETS)
+# Conan 2.x: CMakeDeps/CMakeToolchain generate the config files automatically
+find_package(lzma_sdk REQUIRED)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 find_package(Filesystem REQUIRED)
@@ -37,7 +37,7 @@ list(FILTER libbase_source_files EXCLUDE REGEX "(utf8|_windows)\.cpp$")
 
 add_library(libbase STATIC)
 target_sources(libbase PRIVATE ${libbase_source_files})
-target_link_libraries(libbase PUBLIC liblog_headers libbase_headers)
+target_link_libraries(libbase PUBLIC liblog_headers libbase_headers lzma_sdk::lzma_sdk)
 
 # The "lib" prefix will be added automatically.
 set_target_properties(libbase PROPERTIES OUTPUT_NAME "base")
@@ -65,3 +65,18 @@ target_link_libraries(liblog_common PUBLIC libbase_headers libcutils_headers)
 
 add_library(log_shared SHARED $<TARGET_OBJECTS:liblog_common>)
 add_library(log_static STATIC $<TARGET_OBJECTS:liblog_common>)
+
+# Install libraries and headers for Conan packaging
+install(TARGETS libbase libprocinfo log_static
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib)
+
+# Install all header directories
+install(DIRECTORY 
+        libsystem/include/
+        libutils/include/
+        libcutils/include/
+        libbase/include/
+        liblog/include/
+        libprocinfo/include/
+        DESTINATION include)

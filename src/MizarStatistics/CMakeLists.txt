@@ -22,7 +22,8 @@ target_sources(MizarStatisticsTests PRIVATE
 
 target_link_libraries(MizarStatisticsTests PRIVATE GrpcProtos
   MizarStatistics
-  GTest::GTest
+  GTest::gtest
+  GTest::gmock
   GTest::Main)
 
 register_test(MizarStatisticsTests)

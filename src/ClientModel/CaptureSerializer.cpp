@@ -29,8 +29,8 @@ namespace capture_serializer {
 std::string GenerateCaptureFileName(std::string_view process_name, absl::Time time,
                                     std::string_view suffix) {
   return absl::StrCat(std::filesystem::path(process_name).stem().string(), "_",
-                      orbit_client_model_internal::FormatTimeWithUnderscores(time), suffix,
-                      kFileOrbitExtension);
+                      orbit_client_model_internal::FormatTimeWithUnderscores(time), std::string(suffix),
+                      std::string(kFileOrbitExtension));
 }
 
 void IncludeOrbitExtensionInFile(std::string& file_name) {

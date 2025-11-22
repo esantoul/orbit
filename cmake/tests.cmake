@@ -38,5 +38,5 @@ endfunction()
 
 if(NOT TARGET GTest::GTest)
         add_library(GTest::GTest INTERFACE IMPORTED)
-  target_link_libraries(GTest::GTest INTERFACE CONAN_PKG::gtest)
+  target_link_libraries(GTest::GTest INTERFACE gtest::gtest)
 endif()

@@ -112,6 +112,8 @@ target_sources(
           FramePointerValidatorClient.cpp
           FrameTrack.cpp
           FrameTrackOnlineProcessor.cpp
+          freetype_gl_mat4.c
+          freetype_gl_shader.c
           GlCanvas.cpp
           GlSlider.cpp
           GlUtils.cpp
@@ -185,16 +187,37 @@ target_link_libraries(
          RemoteSymbolProvider
          SymbolProvider
          Symbols
-         CONAN_PKG::freetype-gl
-         CONAN_PKG::freetype
-         CONAN_PKG::glad
-         CONAN_PKG::imgui
+         freetype-gl::freetype-gl
+         Freetype::Freetype
+         glad::glad
+         imgui::imgui
          gte::gte
          Qt5::Gui)
+
+target_compile_definitions(OrbitGl PUBLIC GL_WITH_GLAD=1)
+
+# Allow multiple definitions to resolve conflict between freetype and freetype-gl
+# Both libraries define FT_Error_String, but freetype-gl already depends on freetype
+if(NOT WIN32)
+  target_link_options(OrbitGl PUBLIC -Wl,--allow-multiple-definition)
+endif()
 
 add_custom_command(TARGET OrbitGl POST_BUILD COMMAND ${CMAKE_COMMAND}
                    -E copy ${CMAKE_CURRENT_SOURCE_DIR}/resources/stadia-default-frame-track.opr
                    ${CMAKE_BINARY_DIR}/bin/autopresets/stadia-default-frame-track.opr)
+
+# Copy shader and font files from freetype-gl package to bin directory
+# These files are needed at runtime by OpenGlTextRenderer
+# We use a script to find the files in the Conan cache since the location can vary
+set(COPY_SHADERS_SCRIPT "${CMAKE_SOURCE_DIR}/copy_shaders_and_fonts.sh")
+if(EXISTS "${COPY_SHADERS_SCRIPT}")
+  add_custom_command(TARGET OrbitGl POST_BUILD
+    COMMAND bash "${COPY_SHADERS_SCRIPT}" "${CMAKE_BINARY_DIR}/bin"
+    COMMENT "Copying shader and font files from Conan package"
+    VERBATIM)
+else()
+  message(WARNING "copy_shaders_and_fonts.sh not found at ${COPY_SHADERS_SCRIPT}. Shader and font files may be missing.")
+endif()
 
 if(TARGET OpenGL::GLX AND TARGET OpenGL::OpenGL)
   target_link_libraries(OrbitGl PUBLIC OpenGL::GLX)

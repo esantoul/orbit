@@ -171,14 +171,14 @@ const std::unique_ptr<const orbit_client_data::CallstackData> kCallstackData = [
   std::string result =
       "\"Thread\",\"Timestamp (ns)\",\"Names leaf/foo/main\",\"Addresses "
       "leaf_addr/foo_addr/main_addr\"";
-  result.append(orbit_data_views::kLineSeparator);
+  result.append(std::string(orbit_data_views::kLineSeparator));
   for (size_t index : indices) {
     result.append(orbit_data_views::FormatValueForCsv(
         absl::StrFormat("%s [%u]", kThreadNames[index], kTids[index])));
-    result.append(orbit_data_views::kFieldSeparator);
+    result.append(std::string(orbit_data_views::kFieldSeparator));
 
     result.append(orbit_data_views::FormatValueForCsv(absl::StrFormat("%u", kTimestamps[index])));
-    result.append(orbit_data_views::kFieldSeparator);
+    result.append(std::string(orbit_data_views::kFieldSeparator));
 
     const std::vector<uint64_t>& frames = kCallstackInfos[index].frames();
     std::vector<std::string> names;
@@ -189,13 +189,13 @@ const std::unique_ptr<const orbit_client_data::CallstackData> kCallstackData = [
     std::transform(std::begin(frames), std::end(frames), std::back_inserter(address_strs),
                    [](uint64_t address) { return absl::StrFormat("%#llx", address); });
 
-    constexpr std::string_view kFramesSeparator = "/";
+    constexpr absl::string_view kFramesSeparator = "/";
     result.append(orbit_data_views::FormatValueForCsv(absl::StrJoin(names, kFramesSeparator)));
-    result.append(orbit_data_views::kFieldSeparator);
+    result.append(std::string(orbit_data_views::kFieldSeparator));
 
     result.append(
         orbit_data_views::FormatValueForCsv(absl::StrJoin(address_strs, kFramesSeparator)));
-    result.append(orbit_data_views::kLineSeparator);
+    result.append(std::string(orbit_data_views::kLineSeparator));
   }
   return result;
 }

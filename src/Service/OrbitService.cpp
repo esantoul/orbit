@@ -79,7 +79,7 @@ void PrintInstanceVersions() {
     std::optional<std::string> version = orbit_base::ExecuteCommand(kDriverVersionCommand);
     std::string stripped_version;
     if (version.has_value()) {
-      stripped_version = absl::StripSuffix(version.value(), "\n");
+      stripped_version = std::string(absl::StripSuffix(version.value(), "\n"));
     }
     if (!stripped_version.empty()) {
       ORBIT_LOG("%s: %s", kDriverVersionCommand, stripped_version);

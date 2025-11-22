@@ -210,10 +210,10 @@ const auto [kScimitarVariance, kScimitarTimers] = [] {
   const ErrorMessageOr<std::string> file_content_or_error = orbit_base::ReadFileToString(path);
   EXPECT_TRUE(file_content_or_error.has_value());
   const std::string& file_content = file_content_or_error.value();
-  const std::vector<std::string_view> tokens = absl::StrSplit(file_content, '\n');
+  const std::vector<std::string> tokens = absl::StrSplit(absl::string_view(file_content.data(), file_content.size()), "\n");
 
   double expected_variance;
-  EXPECT_TRUE(absl::SimpleAtod(*tokens.begin(), &expected_variance));
+  EXPECT_TRUE(absl::SimpleAtod(absl::string_view(tokens.begin()->data(), tokens.begin()->size()), &expected_variance));
 
   std::vector<TimerInfo> timers;
   std::transform(std::begin(tokens) + 1, std::end(tokens) - 1, std::back_inserter(timers),

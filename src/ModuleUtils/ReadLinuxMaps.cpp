@@ -25,7 +25,7 @@ ErrorMessageOr<std::string> ReadMaps(pid_t pid) {
 }
 
 std::vector<LinuxMemoryMapping> ParseMaps(std::string_view proc_pid_maps_content) {
-  const std::vector<std::string> proc_pid_maps_lines = absl::StrSplit(proc_pid_maps_content, '\n');
+  const std::vector<std::string> proc_pid_maps_lines = absl::StrSplit(absl::string_view(proc_pid_maps_content.data(), proc_pid_maps_content.size()), "\n");
   std::vector<LinuxMemoryMapping> result;
 
   for (const std::string& line : proc_pid_maps_lines) {

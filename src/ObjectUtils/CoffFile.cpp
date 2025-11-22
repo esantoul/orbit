@@ -385,7 +385,7 @@ ErrorMessageOr<ModuleSymbols> CoffFileImpl::LoadSymbolsFromExportTable() {
 
 ErrorMessageOr<ModuleSymbols> CoffFileImpl::LoadSymbolsFromExportTableInternal(
     const ErrorMessageOr<std::vector<UnwindRange>>& unwind_ranges_or_error) {
-  static constexpr std::string_view kErrorMessagePrefix =
+  static constexpr const char* kErrorMessagePrefix =
       "Unable to load symbols from the Export Table: ";
   if (!HasExportTable()) {
     return ErrorMessage(
@@ -527,11 +527,11 @@ ErrorMessageOr<const llvm::Win64EH::RuntimeFunction*> CoffFileImpl::GetPrimaryRu
 }
 
 ErrorMessageOr<std::vector<CoffFileImpl::UnwindRange>> CoffFileImpl::GetUnwindRanges() {
-  static constexpr std::string_view kErrorMessagePrefix = "Unable to load unwind info ranges: ";
+  static constexpr const char* kErrorMessagePrefix = "Unable to load unwind info ranges: ";
   auto runtime_functions_or_error = GetRuntimeFunctions();
   if (runtime_functions_or_error.has_error()) {
     return ErrorMessage{
-        absl::StrCat(kErrorMessagePrefix, runtime_functions_or_error.error().message())};
+        absl::StrCat(kErrorMessagePrefix, std::string(runtime_functions_or_error.error().message()))};
   }
   const llvm::ArrayRef<llvm::Win64EH::RuntimeFunction>& runtime_functions =
       runtime_functions_or_error.value();
@@ -558,7 +558,7 @@ ErrorMessageOr<std::vector<CoffFileImpl::UnwindRange>> CoffFileImpl::GetUnwindRa
     auto primary_runtime_function_or_error = GetPrimaryRuntimeFunction(&runtime_function);
     if (primary_runtime_function_or_error.has_error()) {
       return ErrorMessage{
-          absl::StrCat(kErrorMessagePrefix, primary_runtime_function_or_error.error().message())};
+          absl::StrCat(kErrorMessagePrefix, std::string(primary_runtime_function_or_error.error().message()))};
     }
     const llvm::Win64EH::RuntimeFunction* primary_runtime_function =
         primary_runtime_function_or_error.value();
@@ -664,11 +664,11 @@ ErrorMessageOr<ModuleSymbols> CoffFileImpl::LoadExceptionTableEntriesAsSymbols()
 
 ErrorMessageOr<ModuleSymbols> CoffFileImpl::LoadExceptionTableEntriesAsSymbolsInternal(
     const ErrorMessageOr<std::vector<UnwindRange>>& unwind_ranges_or_error) {
-  static constexpr std::string_view kErrorMessagePrefix =
+  static constexpr const char* kErrorMessagePrefix =
       "Unable to load unwind info ranges from the Exception Table: ";
   if (!unwind_ranges_or_error.has_value()) {
     return ErrorMessage{
-        absl::StrCat(kErrorMessagePrefix, unwind_ranges_or_error.error().message())};
+        absl::StrCat(kErrorMessagePrefix, std::string(unwind_ranges_or_error.error().message()))};
   }
 
   ModuleSymbols module_symbols;
@@ -689,12 +689,12 @@ ErrorMessageOr<ModuleSymbols> CoffFileImpl::LoadExceptionTableEntriesAsSymbolsIn
 }
 
 ErrorMessageOr<ModuleSymbols> CoffFileImpl::LoadDynamicLinkingSymbolsAndUnwindRangesAsSymbols() {
-  static constexpr std::string_view kErrorMessagePrefix = "Unable to load fallback symbols: ";
+  static constexpr const char* kErrorMessagePrefix = "Unable to load fallback symbols: ";
 
   ErrorMessageOr<std::vector<UnwindRange>> unwind_ranges_or_error = GetUnwindRanges();
   if (!unwind_ranges_or_error.has_value()) {
     return ErrorMessage{
-        absl::StrCat(kErrorMessagePrefix, unwind_ranges_or_error.error().message())};
+        absl::StrCat(kErrorMessagePrefix, std::string(unwind_ranges_or_error.error().message()))};
   }
 
   ErrorMessageOr<ModuleSymbols> dynamic_linking_symbols =

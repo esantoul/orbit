@@ -5,7 +5,11 @@ cmake_minimum_required(VERSION 3.12)
 
 function(grpc_helper)
   find_program(_HELPER_PROTOC protoc)
-  find_program(_HELPER_GRPC_CPP_PLUGIN grpc_cpp_plugin)
+  # In Conan 2.x, _HELPER_GRPC_CPP_PLUGIN is set by CMakeToolchain from conanfile.py
+  # If not set, try to find it
+  if(NOT _HELPER_GRPC_CPP_PLUGIN)
+    find_program(_HELPER_GRPC_CPP_PLUGIN grpc_cpp_plugin)
+  endif()
 
   get_target_property(_sources ${ARGV0} SOURCES)
   set(new_sources "")
@@ -42,7 +46,7 @@ function(grpc_helper)
   list(APPEND _sources ${new_sources})
   set_target_properties(${ARGV0} PROPERTIES SOURCES "${_sources}")
 
-  target_link_libraries(${ARGV0} PUBLIC CONAN_PKG::grpc)
+  target_link_libraries(${ARGV0} PUBLIC grpc::grpc)
   target_include_directories(${ARGV0} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/grpc_codegen/include/)
 
   # include-what-you-use needs full source-code visibility, which means

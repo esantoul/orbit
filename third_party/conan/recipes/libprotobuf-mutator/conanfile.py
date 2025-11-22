@@ -1,4 +1,7 @@
-from conans import ConanFile, CMake, tools
+from conan import ConanFile
+from conan.tools.cmake import CMake, CMakeToolchain
+from conan.tools.files import get, copy, replace_in_file
+import os
 
 
 class LibprotobufMutatorConan(ConanFile):
@@ -6,44 +9,72 @@ class LibprotobufMutatorConan(ConanFile):
     version = "20200506"
     license = "Apache-2.0"
     settings = "os", "compiler", "build_type", "arch"
-    generators = "cmake"
-    exports_sources = "patches/*",
-    build_requires = "protoc_installer/3.9.1@bincrafters/stable",
+    generators = "CMakeDeps"
+    # protoc is included in protobuf package from conan-center
     options = { "fPIC" : [True, False] }
     default_options = { "fPIC" : True }
     short_paths = True
 
-    def configure(self):
+    def config_options(self):
         if self.settings.os == "Windows":
             del self.options.fPIC
 
     def source(self):
-        tools.get(**self.conan_data["sources"][self.version])
-        for patch in self.conan_data["patches"][self.version]:
-            tools.patch(**patch)
+        get(self, **self.conan_data["sources"][self.version])
+        # Modify CMakeLists.txt for Conan 2.x
+        cmakelists = os.path.join(self.source_folder, self.conan_data["source_subfolder"][self.version], "CMakeLists.txt")
+        
+        # Replace find_package() calls to use CONFIG mode with modern targets
+        replace_in_file(self, cmakelists,
+            "find_package(LibLZMA)",
+            "find_package(LibLZMA REQUIRED CONFIG)")
+        replace_in_file(self, cmakelists,
+            "include_directories(${LIBLZMA_INCLUDE_DIRS})",
+            "# Using modern CMake targets, no include_directories needed")
+        
+        replace_in_file(self, cmakelists,
+            "find_package(ZLIB)",
+            "find_package(ZLIB REQUIRED CONFIG)\nset(ZLIB_LIBRARIES ZLIB::ZLIB)")
+        replace_in_file(self, cmakelists,
+            "include_directories(${ZLIB_INCLUDE_DIRS})",
+            "# Using modern CMake targets, no include_directories needed")
+        
+        replace_in_file(self, cmakelists,
+            "  find_package(Protobuf REQUIRED)",
+            "  find_package(protobuf REQUIRED CONFIG)\n  set(PROTOBUF_LIBRARIES protobuf::libprotobuf)")
+        replace_in_file(self, cmakelists,
+            "  include_directories(${PROTOBUF_INCLUDE_DIRS})",
+            "  # Using modern CMake targets, no include_directories needed")
 
     def requirements(self):
-        self.requires("lzma_sdk/19.00@orbitdeps/stable")
+        self.requires("xz_utils/5.4.5")  # Modern LZMA from conan-center
         self.requires("zlib/1.2.11")
-        self.requires("protobuf/3.9.1@bincrafters/stable")
+        self.requires("protobuf/3.21.12")  # Updated for Conan 2.x
+
+    def generate(self):
+        tc = CMakeToolchain(self)
+        tc.variables["LIB_PROTO_MUTATOR_TESTING"] = False
+        tc.variables["CMAKE_CXX_FLAGS"] = "-fPIE"
+        tc.variables["CMAKE_C_FLAGS"] = "-fPIE"
+        tc.generate()
 
     def build(self):
         self._source_subfolder = self.conan_data["source_subfolder"][self.version]
         cmake = CMake(self)
-        cmake.definitions["LIB_PROTO_MUTATOR_TESTING"] = False
-        cmake.definitions["CMAKE_CXX_FLAGS"] = "-fPIE"
-        cmake.definitions["CMAKE_C_FLAGS"] = "-fPIE"
-        cmake.configure(source_folder=self._source_subfolder)
+        cmake.configure(build_script_folder=os.path.join(self.source_folder, self._source_subfolder))
         cmake.build()
 
     def package(self):
-        self.copy("*.h", dst="include",
-                  src="{}/src".format(self._source_subfolder))
-        self.copy("*.h", dst="include/port",
-                  src="{}/port".format(self._source_subfolder))
-        self.copy("*.lib", dst="lib", keep_path=False)
-        self.copy("*.pdb", dst="lib", keep_path=False)
-        self.copy("*.a", dst="lib", keep_path=False)
+        self._source_subfolder = self.conan_data["source_subfolder"][self.version]
+        copy(self, "*.h", 
+             src=os.path.join(self.source_folder, self._source_subfolder, "src"), 
+             dst=os.path.join(self.package_folder, "include"))
+        copy(self, "*.h", 
+             src=os.path.join(self.source_folder, self._source_subfolder, "port"), 
+             dst=os.path.join(self.package_folder, "include", "port"))
+        copy(self, "*.lib", src=self.build_folder, dst=os.path.join(self.package_folder, "lib"), keep_path=False)
+        copy(self, "*.pdb", src=self.build_folder, dst=os.path.join(self.package_folder, "lib"), keep_path=False)
+        copy(self, "*.a", src=self.build_folder, dst=os.path.join(self.package_folder, "lib"), keep_path=False)
 
     def package_info(self):
         self.cpp_info.libdirs = ["lib"]

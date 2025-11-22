@@ -69,8 +69,8 @@ target_link_libraries(
           OrbitSsh
           OrbitSshQt
           QtUtils
-          CONAN_PKG::abseil
-          CONAN_PKG::grpc
+          abseil::abseil
+          grpc::grpc
           Qt5::Widgets)
 
 set_target_properties(SessionSetup PROPERTIES AUTOMOC ON)

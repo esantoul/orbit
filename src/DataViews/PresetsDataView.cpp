@@ -48,7 +48,7 @@ namespace {
 
 std::string GetLoadStatusAndStateString(orbit_data_views::AppInterface* app,
                                         const PresetFile& preset) {
-  std::string_view load_status = preset.IsLoaded()
+  absl::string_view load_status = preset.IsLoaded()
                                      ? orbit_data_views::PresetsDataView::kLoadedPresetPrefix
                                      : orbit_data_views::PresetsDataView::kNotLoadedPresetPrefix;
   orbit_data_views::PresetLoadState load_state = app->GetPresetLoadState(preset);
@@ -57,7 +57,7 @@ std::string GetLoadStatusAndStateString(orbit_data_views::AppInterface* app,
 
 std::string GetLoadStatusAndStateTooltip(orbit_data_views::AppInterface* app,
                                          const PresetFile& preset) {
-  std::string_view load_status =
+  absl::string_view load_status =
       preset.IsLoaded() ? orbit_data_views::PresetsDataView::kLoadedPresetTooltipSuffix
                         : orbit_data_views::PresetsDataView::kNotLoadedPresetTooltipSuffix;
   orbit_data_views::PresetLoadState load_state = app->GetPresetLoadState(preset);

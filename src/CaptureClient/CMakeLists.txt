@@ -37,7 +37,7 @@ target_link_libraries(CaptureClient PUBLIC
         ClientData
         GrpcProtos
         Introspection
-        CONAN_PKG::llvm-core)
+        llvm-core::llvm-core)
 
 add_fuzzer(CaptureEventProcessorProcessEventsFuzzer CaptureEventProcessorProcessEventsFuzzer.cpp)
 target_link_libraries(CaptureEventProcessorProcessEventsFuzzer

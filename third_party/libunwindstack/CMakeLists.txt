@@ -153,9 +153,9 @@ target_sources(libunwindstack_common PUBLIC
 target_include_directories(libunwindstack_common PUBLIC include/)
 target_compile_features(libunwindstack_common PUBLIC cxx_std_17)
 target_link_libraries(libunwindstack_common PRIVATE
-  CONAN_PKG::capstone
-  CONAN_PKG::libunwindstack-android-dependencies
-  CONAN_PKG::lzma_sdk)
+  capstone::capstone
+  libunwindstack-android-dependencies::libunwindstack-android-dependencies
+  LibLZMA::LibLZMA)
 
 # Clang >= 8.0
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND
@@ -175,15 +175,11 @@ add_library(libunwindstack STATIC
   $<TARGET_OBJECTS:libunwindstack_common>
   LogStdout.cpp)
 
-# liblog_static is not automatically included in the
-# CONAN_PKG::libunwindstack-android-dependencies target,
-# so we link to it explicitly here.
-find_library(liblog_static log_static REQUIRED)
+# Conan 2.x: Use modern CMake targets
+# Dependencies are found via find_package() in the main CMakeLists.txt
 target_link_libraries(libunwindstack PUBLIC
-  CONAN_PKG::capstone
-  CONAN_PKG::libunwindstack-android-dependencies
-  CONAN_PKG::lzma_sdk
-  ${liblog_static})
+  capstone::capstone
+  libunwindstack-android-dependencies::libunwindstack-android-dependencies)
 target_include_directories(libunwindstack PUBLIC include/)
 
 # Clang >= 8.0
@@ -293,16 +289,14 @@ target_sources(libunwindstack_tests PRIVATE
 # dynamic linker.
 target_link_libraries(libunwindstack_tests PRIVATE ${CMAKE_DL_LIBS})
 
-# liblog_shared is not automatically included in the
-# CONAN_PKG::libunwindstack-android-dependencies target,
-# so we link to it explicitly here.
-find_library(liblog_shared log_shared REQUIRED)
+# Conan 2.x: Use modern CMake targets
+# Dependencies are found via find_package() in the main CMakeLists.txt
+# Note: Use Orbit's custom GTest::Main which provides main() function
 target_link_libraries(libunwindstack_tests PRIVATE
-  CONAN_PKG::capstone
-  CONAN_PKG::libunwindstack-android-dependencies
-  CONAN_PKG::lzma_sdk
-  CONAN_PKG::zlib
-  ${liblog_shared}
+  capstone::capstone
+  libunwindstack-android-dependencies::libunwindstack-android-dependencies
+  ZLIB::ZLIB
+  LibLZMA::LibLZMA
   GTest::Main)
 
 target_include_directories(libunwindstack_tests PRIVATE
@@ -354,9 +348,8 @@ add_library(libunwindstack_local SHARED
   tests/TestLocal.cpp)
 
 target_link_libraries(libunwindstack_local PRIVATE
-  CONAN_PKG::libunwindstack-android-dependencies
-  CONAN_PKG::lzma_sdk
-  ${liblog_static})
+  libunwindstack-android-dependencies::libunwindstack-android-dependencies
+  LibLZMA::LibLZMA)
 
 target_include_directories(libunwindstack_local PRIVATE include/)
 

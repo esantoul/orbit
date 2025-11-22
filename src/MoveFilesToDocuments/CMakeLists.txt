@@ -25,7 +25,7 @@ target_link_libraries(MoveFilesToDocuments PUBLIC
         OrbitPaths
         Qt5::Widgets
         Qt5::Core
-        CONAN_PKG::abseil)
+        abseil::abseil)
 
 set_target_properties(MoveFilesToDocuments PROPERTIES AUTOMOC ON)
 set_target_properties(MoveFilesToDocuments PROPERTIES AUTOUIC ON)

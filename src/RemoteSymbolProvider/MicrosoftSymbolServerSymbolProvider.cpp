@@ -35,7 +35,8 @@ std::string MicrosoftSymbolServerSymbolProvider::GetDownloadUrl(
   std::filesystem::path symbol_filename = module_path.filename();
   symbol_filename.replace_extension(".pdb");
   std::string build_id = absl::StrReplaceAll(module_id.build_id, {{"-", ""}});
-  return absl::Substitute("$0/$1/$2/$1", kUrlToSymbolServer, symbol_filename.string(), build_id);
+  std::string filename_str = symbol_filename.string();
+  return absl::Substitute("$0/$1/$2/$1", std::string(kUrlToSymbolServer), filename_str, build_id);
 }
 
 Future<SymbolLoadingOutcome> MicrosoftSymbolServerSymbolProvider::RetrieveSymbols(

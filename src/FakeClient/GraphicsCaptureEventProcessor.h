@@ -277,7 +277,7 @@ class GraphicsCaptureEventProcessor : public orbit_capture_client::CaptureEventP
     });
     absl::StrAppend(&output, "\n");
 
-    ErrorMessageOr<void> frame_time_write_result = orbit_base::WriteStringToFile(filename, output);
+    ErrorMessageOr<void> frame_time_write_result = orbit_base::WriteStringToFile(std::string(filename), output);
     ORBIT_FAIL_IF(frame_time_write_result.has_error(), "Writing to \"%s\": %s", filename,
                   frame_time_write_result.error().message());
   }

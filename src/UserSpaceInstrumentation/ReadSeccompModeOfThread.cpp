@@ -35,12 +35,12 @@ std::optional<int> ReadSeccompModeOfThread(pid_t tid) {
   while (std::getline(status_content_stream, status_line)) {
     if (!absl::StartsWith(status_line, kSeccompPrefix)) continue;
 
-    std::vector<std::string_view> seccomp_tokens =
-        absl::StrSplit(status_line, absl::ByAnyChar(": \t"), absl::SkipWhitespace{});
+    std::vector<std::string> seccomp_tokens =
+        absl::StrSplit(absl::string_view(status_line.data(), status_line.size()), absl::ByAnyChar(": \t"));
     if (seccomp_tokens.size() < 2) break;
 
     int seccomp_mode = -1;
-    if (!absl::SimpleAtoi(seccomp_tokens[1], &seccomp_mode)) break;
+    if (!absl::SimpleAtoi(absl::string_view(seccomp_tokens[1].data(), seccomp_tokens[1].size()), &seccomp_mode)) break;
 
     if (seccomp_mode != SECCOMP_MODE_DISABLED && seccomp_mode != SECCOMP_MODE_STRICT &&
         seccomp_mode != SECCOMP_MODE_FILTER) {

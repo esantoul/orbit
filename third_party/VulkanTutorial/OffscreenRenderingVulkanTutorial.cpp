@@ -230,7 +230,9 @@ void OffscreenRenderingVulkanTutorial::CreateOffscreenImage() {
   };
   image_extent_ = create_info.extent;
 
-  for (int format_int = VK_FORMAT_BEGIN_RANGE; format_int <= VK_FORMAT_END_RANGE; ++format_int) {
+  // VK_FORMAT_BEGIN_RANGE and VK_FORMAT_END_RANGE were removed in Vulkan 1.2+
+  // Use explicit range from UNDEFINED to ASTC_12x12_SRGB_BLOCK (183)
+  for (int format_int = VK_FORMAT_UNDEFINED; format_int <= VK_FORMAT_ASTC_12x12_SRGB_BLOCK; ++format_int) {
     const auto format = static_cast<VkFormat>(format_int);
 
     VkImageFormatProperties format_properties{};

@@ -21,7 +21,7 @@ target_link_libraries(
   PresetFile
   PUBLIC OrbitBase
          ClientProtos
-         CONAN_PKG::protobuf)
+         protobuf::libprotobuf)
 
 add_executable(PresetFileTests)
 
@@ -33,6 +33,6 @@ target_link_libraries(
   PRIVATE PresetFile
           TestUtils
           GTest::Main
-          CONAN_PKG::abseil)
+          abseil::abseil)
 
 register_test(PresetFileTests)

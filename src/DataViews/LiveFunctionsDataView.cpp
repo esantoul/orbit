@@ -415,16 +415,16 @@ void LiveFunctionsDataView::OnJumpToRequested(const std::string& action,
 
     std::string line;
     line.append(FormatValueForCsv(capture_data.GetScopeInfo(scope_id.value()).GetName()));
-    line.append(kFieldSeparator);
+    line.append(kFieldSeparator.data(), kFieldSeparator.size());
     line.append(FormatValueForCsv(absl::StrFormat(
         "%s [%lu]", capture_data.GetThreadName(timer->thread_id()), timer->thread_id())));
-    line.append(kFieldSeparator);
+    line.append(kFieldSeparator.data(), kFieldSeparator.size());
     line.append(FormatValueForCsv(absl::StrFormat("%lu", timer->start())));
-    line.append(kFieldSeparator);
+    line.append(kFieldSeparator.data(), kFieldSeparator.size());
     line.append(FormatValueForCsv(absl::StrFormat("%lu", timer->end())));
-    line.append(kFieldSeparator);
+    line.append(kFieldSeparator.data(), kFieldSeparator.size());
     line.append(FormatValueForCsv(absl::StrFormat("%lu", timer->end() - timer->start())));
-    line.append(kLineSeparator);
+    line.append(kLineSeparator.data(), kLineSeparator.size());
 
     OUTCOME_TRY(orbit_base::WriteFully(fd, line));
   }

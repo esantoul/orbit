@@ -63,22 +63,22 @@ constexpr std::string_view kMenuActionCopySelection = "Copy Selection";
 constexpr std::string_view kMenuActionExportToCsv = "Export to CSV";
 constexpr std::string_view kMenuActionExportEventsToCsv = "Export events to CSV";
 
-static constexpr std::string_view kFieldSeparator = ",";
+static constexpr absl::string_view kFieldSeparator = ",";
 // CSV RFC requires lines to end with CRLF
-static constexpr std::string_view kLineSeparator = "\r\n";
+static constexpr absl::string_view kLineSeparator = "\r\n";
 
 // Values in the DataView may contain commas, for example, functions with arguments. We quote all
 // values in the output and also escape quotes (with a second quote) in values to ensure the CSV
 // files can be imported correctly in spreadsheet applications. The formatting follows the
 // specification in https://tools.ietf.org/html/rfc4180.
-std::string FormatValueForCsv(std::string_view value);
+std::string FormatValueForCsv(absl::string_view value);
 
 template <typename Range>
 ErrorMessageOr<void> WriteLineToCsv(const orbit_base::unique_fd& fd, const Range& cells) {
   std::string header_line = absl::StrJoin(
       cells, kFieldSeparator,
       [](std::string* out, const std::string& name) { out->append(FormatValueForCsv(name)); });
-  header_line.append(kLineSeparator);
+  header_line.append(kLineSeparator.data(), kLineSeparator.size());
   return orbit_base::WriteFully(fd, header_line);
 }
 

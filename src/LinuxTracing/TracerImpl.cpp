@@ -1327,44 +1327,11 @@ uint64_t TracerImpl::ProcessSampleEventAndReturnTimestamp(const perf_event_heade
     ++stats_.sample_count;
 
   } else if (is_task_newtask) {
-    ORBIT_CHECK(header.size == sizeof(perf_event_raw_sample<task_newtask_tracepoint>));
-    perf_event_raw_sample<task_newtask_tracepoint> ring_buffer_record;
-    ring_buffer->ConsumeRecord(header, &ring_buffer_record);
-    TaskNewtaskPerfEvent event{
-        .timestamp = ring_buffer_record.sample_id.time,
-        .ordered_stream = PerfEventOrderedStream::FileDescriptor(fd),
-        .data =
-            {
-                // The tracepoint format calls the new tid "data.pid" but it's effectively the
-                // thread id.
-                // Note that ring_buffer_record.sample_id.pid and ring_buffer_record.sample_id.tid
-                // are NOT the pid and tid of the new process/thread, but the ones of the
-                // process/thread that created this one.
-                .new_tid = ring_buffer_record.data.pid,
-                .was_created_by_tid = static_cast<pid_t>(ring_buffer_record.sample_id.tid),
-                .was_created_by_pid = static_cast<pid_t>(ring_buffer_record.sample_id.pid),
-            },
-    };
-    memcpy(event.data.comm, ring_buffer_record.data.comm, 16);
+    TaskNewtaskPerfEvent event = ConsumeTaskNewtaskPerfEvent(ring_buffer, header);
     DeferEvent(event);
 
   } else if (is_task_rename) {
-    ORBIT_CHECK(header.size == sizeof(perf_event_raw_sample<task_rename_tracepoint>));
-    perf_event_raw_sample<task_rename_tracepoint> ring_buffer_record;
-    ring_buffer->ConsumeRecord(header, &ring_buffer_record);
-
-    TaskRenamePerfEvent event{
-        .timestamp = ring_buffer_record.sample_id.time,
-        .ordered_stream = PerfEventOrderedStream::FileDescriptor(fd),
-        .data =
-            {
-                // The tracepoint format calls the renamed tid "data.pid" but it's effectively the
-                // thread id. This should match ring_buffer_record.sample_id.tid.
-                .renamed_tid = ring_buffer_record.data.pid,
-            },
-    };
-
-    memcpy(event.data.newcomm, ring_buffer_record.data.newcomm, 16);
+    TaskRenamePerfEvent event = ConsumeTaskRenamePerfEvent(ring_buffer, header);
     DeferEvent(event);
 
   } else if (is_sched_switch) {

@@ -5,6 +5,8 @@
 #ifndef MIZAR_DATA_MIZAR_FRAME_TRACK_H_
 #define MIZAR_DATA_MIZAR_FRAME_TRACK_H_
 
+#include <variant>
+
 #include "ClientData/ScopeId.h"
 #include "ClientData/ScopeInfo.h"
 #include "GrpcProtos/capture.pb.h"
@@ -26,5 +28,29 @@ using FrameTrackInfo =
                                                         orbit_grpc_protos::PresentEvent::Source>>;
 
 }  // namespace orbit_mizar_data
+
+// Hash support for the specific variant types used in Mizar frame tracks
+// This needs to be in std namespace for ADL to work properly with std::variant
+namespace std {
+template <typename H>
+H AbslHashValue(H h, const std::variant<orbit_client_data::ScopeId,
+                                         orbit_grpc_protos::PresentEvent::Source>& v) {
+  return std::visit(
+      [h = std::move(h), index = v.index()](const auto& value) mutable {
+        return H::combine(std::move(h), index, value);
+      },
+      v);
+}
+
+template <typename H>
+H AbslHashValue(H h, const std::variant<orbit_client_data::ScopeInfo,
+                                         orbit_grpc_protos::PresentEvent::Source>& v) {
+  return std::visit(
+      [h = std::move(h), index = v.index()](const auto& value) mutable {
+        return H::combine(std::move(h), index, value);
+      },
+      v);
+}
+}  // namespace std
 
 #endif  // MIZAR_DATA_MIZAR_FRAME_TRACK_H_

@@ -460,7 +460,7 @@ ErrorMessageOr<void> SamplingReportDataView::WriteStackEventsToCsv(const std::st
 
   static const std::vector<std::string> kNames{"Thread", "Timestamp (ns)", "Names leaf/foo/main",
                                                "Addresses leaf_addr/foo_addr/main_addr"};
-  constexpr std::string_view kFramesSeparator = "/";
+  constexpr absl::string_view kFramesSeparator = "/";
 
   OUTCOME_TRY(WriteLineToCsv(fd, kNames));
   const orbit_client_data::CallstackData& callstack_data = sampling_report_->GetCallstackData();

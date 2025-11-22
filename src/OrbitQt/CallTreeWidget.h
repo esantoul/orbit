@@ -96,7 +96,7 @@ class CallTreeWidget : public QWidget {
 
     void SetFilter(std::string_view filter) {
       lowercase_filter_tokens_ =
-          absl::StrSplit(absl::AsciiStrToLower(filter), ' ', absl::SkipWhitespace());
+          absl::StrSplit(absl::AsciiStrToLower(absl::string_view(filter.data(), filter.size())), ' ', absl::SkipWhitespace());
     }
 
     static const QColor kHighlightColor;

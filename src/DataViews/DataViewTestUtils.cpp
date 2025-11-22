@@ -62,8 +62,8 @@ void CheckCopySelectionIsInvoked(const FlattenContextMenu& context_menu,
 static void ExpectSameLines(const std::string_view& actual, const std::string_view& expected) {
   static const std::string kDelimeter = "\r\n";
 
-  std::vector<std::string_view> actual_lines = absl::StrSplit(actual, kDelimeter);
-  std::vector<std::string_view> expected_lines = absl::StrSplit(expected, kDelimeter);
+  std::vector<absl::string_view> actual_lines = absl::StrSplit(absl::string_view(actual.data(), actual.size()), kDelimeter);
+  std::vector<absl::string_view> expected_lines = absl::StrSplit(absl::string_view(expected.data(), expected.size()), kDelimeter);
   EXPECT_THAT(actual_lines, testing::UnorderedElementsAreArray(expected_lines));
 }
 

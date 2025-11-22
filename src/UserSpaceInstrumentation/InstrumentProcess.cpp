@@ -93,7 +93,7 @@ ErrorMessageOr<bool> AlreadyInjected(const std::vector<ModuleInfo>& modules) {
 // We need to initialize some thread local memory when entering the payload functions. This leads to
 // a situation where instrumenting the functions below would lead to a recursive call into the
 // instrumentation. We just skip these and leave instrumenting them to the kernel/uprobe fallback.
-bool IsBlocklisted(std::string_view function_name) {
+bool IsBlocklisted(absl::string_view function_name) {
   static const absl::flat_hash_set<std::string> kBlocklist{
       "__GI___libc_malloc",
       "__GI___libc_free",

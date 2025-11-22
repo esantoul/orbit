@@ -49,6 +49,12 @@ GenericTracepointPerfEvent ConsumeGenericTracepointPerfEvent(PerfEventRingBuffer
 SchedWakeupPerfEvent ConsumeSchedWakeupPerfEvent(PerfEventRingBuffer* ring_buffer,
                                                  const perf_event_header& header);
 
+TaskNewtaskPerfEvent ConsumeTaskNewtaskPerfEvent(PerfEventRingBuffer* ring_buffer,
+                                                  const perf_event_header& header);
+
+TaskRenamePerfEvent ConsumeTaskRenamePerfEvent(PerfEventRingBuffer* ring_buffer,
+                                               const perf_event_header& header);
+
 SchedWakeupWithCallchainPerfEvent ConsumeSchedWakeupWithCallchainPerfEvent(
     PerfEventRingBuffer* ring_buffer, const perf_event_header& header);
 

@@ -5,6 +5,7 @@
 #ifndef ORBIT_SERVICE_ORBIT_SERVICE_H
 #define ORBIT_SERVICE_ORBIT_SERVICE_H
 
+#include <absl/strings/string_view.h>
 #include <stdint.h>
 
 #include <atomic>
@@ -37,7 +38,7 @@ class OrbitService {
 
   std::optional<std::chrono::time_point<std::chrono::steady_clock>> last_stdin_message_ =
       std::nullopt;
-  const std::string_view kStartWatchdogPassphrase = "start_watchdog";
+  static constexpr absl::string_view kStartWatchdogPassphrase = "start_watchdog";
   // TODO(antonrohr): The main thread can currently be blocked by slow functions
   //  like FunctionsDataView::DoSort and FunctionsDataView::DoFilter. The
   //  default timeout of 10 seconds is not enough with the blocking behaviour.

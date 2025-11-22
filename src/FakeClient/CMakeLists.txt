@@ -15,7 +15,7 @@ target_sources(OrbitFakeClient PRIVATE
         GraphicsCaptureEventProcessor.h)
 
 target_link_libraries(OrbitFakeClient PRIVATE
-        CONAN_PKG::abseil
+        abseil::abseil
         ApiUtils
         CaptureClient
         ClientData

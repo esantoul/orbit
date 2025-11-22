@@ -134,7 +134,7 @@ ErrorMessageOr<void> SamplingWithFrameTrackWidget::IsDataValid(
     const orbit_mizar_data::MizarPairedData& data, std::string_view data_title) {
   const bool is_valid = !data.GetFrameTracks().empty();
   if (!is_valid) {
-    return ErrorMessage(absl::StrCat(data_title,
+    return ErrorMessage(absl::StrCat(std::string(data_title),
                                      " has no frame tracks.\n"
                                      "Sampling with comparison is not possible."
                                      "A frame track may be either:\n"

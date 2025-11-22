@@ -133,7 +133,7 @@ std::string GraphTrack<Dimension>::GetLabelTextFromValues(
   std::optional<uint8_t> value_decimal_digits = series_.GetValueDecimalDigits();
   std::string value_unit = series_.GetValueUnit();
   std::string text;
-  std::string_view delimiter = "";
+  absl::string_view delimiter = "";
   for (int i = Dimension - 1; i >= 0; i--) {
     std::string formatted_name =
         series_names[i].empty() ? "" : absl::StrFormat("%s: ", series_names[i]);

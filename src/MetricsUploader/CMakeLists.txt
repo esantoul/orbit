@@ -31,7 +31,7 @@ endif()
 
 target_link_libraries(MetricsUploader PUBLIC OrbitBase
                                              OrbitVersion
-                                             CONAN_PKG::abseil)
+                                             abseil::abseil)
 
 if (WIN32)
 target_link_libraries(MetricsUploader PUBLIC rpcrt4.lib)
@@ -42,7 +42,7 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/protos/MetricsUploader)
 protobuf_generate(TARGET MetricsUploader PROTOS orbit_log_event.proto
                   PROTOC_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/protos/MetricsUploader)
 target_include_directories(MetricsUploader PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/protos)
-target_link_libraries(MetricsUploader PUBLIC CONAN_PKG::protobuf)
+target_link_libraries(MetricsUploader PUBLIC protobuf::libprotobuf)
 
 if (WIN32)
 # build .dll for tests
@@ -82,7 +82,8 @@ target_sources(MetricsUploaderTests PRIVATE MetricsUploaderWindowsTest.cpp)
 endif()
 
 target_link_libraries(MetricsUploaderTests PRIVATE MetricsUploader
-                                                   GTest::GTest
+                                                   GTest::gtest
+  GTest::gmock
                                                    GTest::Main)
 
 register_test(MetricsUploaderTests)

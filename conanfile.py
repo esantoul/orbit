@@ -120,7 +120,7 @@ class OrbitConan(ConanFile):
             self.requires("freetype-gl/79b03d9.1@{}".format(self._orbit_channel))
             self.requires("glad/0.1.34")
             self.requires("imgui/1.85")
-            self.requires("libpng/1.6.37", override=True)
+            self.requires("libpng/1.6.43", override=True)
             self.requires("libssh2/1.9.0")
 
             if not self.options.system_qt:

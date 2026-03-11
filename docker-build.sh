@@ -10,7 +10,7 @@ IMAGE_NAME="orbit-build-env:latest"
 # Default values
 BUILD_TYPE="relwithdebinfo"
 STATIC_QT="false"
-BUILD_JOBS=""  # Empty means use default (all cores)
+DOCKER_CPUS=""  # Empty means use all available CPUs
 
 # Function to display usage
 show_usage() {
@@ -26,7 +26,7 @@ BUILD_TYPE:
 
 OPTIONS:
   --static-qt        Build with static Qt (portable binary, takes 2-4 hours)
-  --jobs N           Limit parallel build jobs to N (default: use all cores)
+  --cpus N           Limit CPU usage to N CPUs (default: use all available CPUs)
   --help             Show this help message
 
 EXAMPLES:
@@ -34,8 +34,8 @@ EXAMPLES:
   $0 release                   # Build release with dynamic Qt
   $0 --static-qt               # Build relwithdebinfo with static Qt
   $0 release --static-qt       # Build release with static Qt
-  $0 --jobs 4                  # Build with 4 parallel jobs (reduces RAM usage)
-  $0 release --jobs 8          # Build release with 8 parallel jobs
+  $0 --cpus 4                  # Build with CPU limit of 4 (reduces resource usage)
+  $0 release --cpus 8          # Build release with CPU limit of 8
 
 NOTES:
   - First run: ./docker-build-env.sh to create the build environment image
@@ -58,12 +58,12 @@ while [[ $# -gt 0 ]]; do
             STATIC_QT="true"
             shift
             ;;
-        --jobs)
+        --cpus)
             if [[ -z "$2" ]] || [[ "$2" =~ ^- ]]; then
-                echo "Error: --jobs requires a numeric argument"
+                echo "Error: --cpus requires a numeric argument"
                 exit 1
             fi
-            BUILD_JOBS="$2"
+            DOCKER_CPUS="$2"
             shift 2
             ;;
         --help|-h)
@@ -96,8 +96,8 @@ echo "========================================"
 echo "Build Type: $BUILD_TYPE"
 echo "Static Qt: $STATIC_QT"
 echo "Build Directory: $BUILD_DIR"
-if [ -n "$BUILD_JOBS" ]; then
-    echo "Parallel Jobs: $BUILD_JOBS"
+if [ -n "$DOCKER_CPUS" ]; then
+    echo "CPU Limit: $DOCKER_CPUS"
 fi
 echo "========================================"
 
@@ -114,23 +114,38 @@ echo ""
 
 # Run the Docker container with mounted volumes (Conan 2.x uses .conan2)
 # Note: workspace is mounted as rw to allow CMakeUserPresets.json generation
-docker run --rm \
-    -v "$SCRIPT_DIR:/workspace:rw" \
-    -v "$CONAN_CACHE_DIR:/root/.conan2:rw" \
-    -e BUILD_TYPE="$BUILD_TYPE" \
-    -e STATIC_QT="$STATIC_QT" \
-    -e BUILD_JOBS="$BUILD_JOBS" \
-    "$IMAGE_NAME"
+DOCKER_ARGS=(
+    --rm
+    -v "$SCRIPT_DIR:/workspace:rw"
+    -v "$CONAN_CACHE_DIR:/root/.conan2:rw"
+    -e BUILD_TYPE="$BUILD_TYPE"
+    -e STATIC_QT="$STATIC_QT"
+)
+
+# Add CPU limit if specified
+if [ -n "$DOCKER_CPUS" ]; then
+    DOCKER_ARGS+=(--cpus "$DOCKER_CPUS")
+fi
+
+DOCKER_ARGS+=("$IMAGE_NAME")
+
+docker run "${DOCKER_ARGS[@]}"
 
 echo ""
 echo "========================================"
 echo "Build completed successfully!"
 echo "========================================"
+# Map build type to CMake build type for output path
+case "$BUILD_TYPE" in
+    debug) CMAKE_BT="Debug" ;;
+    release) CMAKE_BT="Release" ;;
+    relwithdebinfo|*) CMAKE_BT="RelWithDebInfo" ;;
+esac
 echo "Binaries are available at:"
-echo "  $BUILD_DIR/bin/"
+echo "  build/$CMAKE_BT/bin/"
 echo ""
 echo "Main executables:"
-echo "  - Frontend: $BUILD_DIR/bin/Orbit"
-echo "  - Service:  $BUILD_DIR/bin/OrbitService"
+echo "  - Frontend: build/$CMAKE_BT/bin/Orbit"
+echo "  - Service:  build/$CMAKE_BT/bin/OrbitService"
 echo "========================================"
 

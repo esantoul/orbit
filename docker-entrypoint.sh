@@ -119,6 +119,9 @@ conan install /workspace \
     --conf tools.system.package_manager:sudo=False
 
 # Conan 2.x: Build Orbit
+# Remove stale CMake cache to avoid referencing old Conan package paths
+echo "Clearing CMake cache for fresh configure..."
+rm -rf "$BUILD_PATH/CMakeCache.txt" "$BUILD_PATH/CMakeFiles"
 echo "Building Orbit..."
 
 # Set CMAKE_BUILD_PARALLEL_LEVEL to control parallel jobs if BUILD_JOBS is specified
@@ -128,16 +131,19 @@ if [ -n "$BUILD_JOBS" ]; then
 fi
 
 # In Conan 2.x, build from the output folder where generators were created
-cd "$BUILD_PATH" && conan build /workspace \
+# Disable tests in Docker: integration tests need kernel access (perf_event_open, ptrace)
+conan build /workspace \
+    --output-folder="$BUILD_PATH" \
     --profile="$PROFILE" \
-    --settings=build_type="$BUILD_TYPE_CMAKE"
+    --settings=build_type="$BUILD_TYPE_CMAKE" \
+    -o run_tests=False
 
 echo "========================================"
 echo "Build completed successfully!"
 echo "========================================"
-echo "Binaries should be available at: $BUILD_DIR/bin/"
+echo "Binaries should be available at: build/$BUILD_TYPE_CMAKE/bin/"
 echo ""
 echo "Main binaries:"
-echo "  - Orbit:        $BUILD_DIR/bin/Orbit"
-echo "  - OrbitService: $BUILD_DIR/bin/OrbitService"
+echo "  - Orbit:        build/$BUILD_TYPE_CMAKE/bin/Orbit"
+echo "  - OrbitService: build/$BUILD_TYPE_CMAKE/bin/OrbitService"
 echo "========================================"

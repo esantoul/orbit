@@ -10,6 +10,7 @@
 #include <sys/time.h>
 
 #include <cerrno>
+#include <fstream>
 
 #include "LinuxTracingUtils.h"
 #include "OrbitBase/Logging.h"
@@ -39,11 +40,25 @@ int generic_event_open(perf_event_attr* attr, pid_t pid, int32_t cpu) {
   return fd;
 }
 
+uint32_t read_uprobe_type() {
+  static uint32_t cached_type = [] {
+    std::ifstream f("/sys/bus/event_source/devices/uprobe/type");
+    uint32_t t = 7;  // fallback
+    if (f.is_open()) {
+      f >> t;
+      ORBIT_LOG("Read uprobe type from sysfs: %u", t);
+    } else {
+      ORBIT_LOG("Could not open /sys/bus/event_source/devices/uprobe/type, using fallback type=%u", t);
+    }
+    return t;
+  }();
+  return cached_type;
+}
+
 perf_event_attr uprobe_event_attr(const char* module, uint64_t function_offset) {
   perf_event_attr pe = generic_event_attr();
 
-  pe.type = 7;                                    // TODO: should be read from
-                                                  //  "/sys/bus/event_source/devices/uprobe/type"
+  pe.type = read_uprobe_type();
   pe.config1 = absl::bit_cast<uint64_t>(module);  // pe.config1 == pe.uprobe_path
   pe.config2 = function_offset;                   // pe.config2 == pe.probe_offset
 

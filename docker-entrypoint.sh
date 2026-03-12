@@ -145,7 +145,7 @@ conan build /workspace \
     --output-folder="$BUILD_PATH" \
     --profile="$PROFILE" \
     --settings=build_type="$BUILD_TYPE_CMAKE" \
-    -o run_tests=False \
+    -o "&:run_tests=False" \
     $CONAN_OPTIONS
 
 echo "========================================"

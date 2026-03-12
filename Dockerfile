@@ -20,6 +20,18 @@ RUN apt-get update && apt-get install -y \
     libqt5webchannel5-dev \
     libqt5websockets5-dev \
     libxxf86vm-dev \
+    pkg-config \
+    libgl-dev \
+    libegl-dev \
+    libfontconfig1-dev \
+    libxkbcommon-dev \
+    libxkbcommon-x11-dev \
+    libxrandr-dev \
+    libxcursor-dev \
+    libxinerama-dev \
+    libxcomposite-dev \
+    libxdamage-dev \
+    libwayland-dev \
     python3-pip \
     git \
     && rm -rf /var/lib/apt/lists/*

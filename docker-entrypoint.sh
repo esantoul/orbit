@@ -93,6 +93,12 @@ case "$BUILD_TYPE" in
         ;;
 esac
 
+# Build Conan options based on STATIC_QT flag
+CONAN_OPTIONS=""
+if [ "$STATIC_QT" = "true" ]; then
+    CONAN_OPTIONS="-o system_qt=False"
+fi
+
 # Build directory name
 BUILD_DIR="build_${BUILD_TYPE}"
 BUILD_PATH="/workspace/$BUILD_DIR"
@@ -116,12 +122,15 @@ conan install /workspace \
     --settings=build_type="$BUILD_TYPE_CMAKE" \
     --build=missing \
     --conf tools.system.package_manager:mode=install \
-    --conf tools.system.package_manager:sudo=False
+    --conf tools.system.package_manager:sudo=False \
+    $CONAN_OPTIONS
 
 # Conan 2.x: Build Orbit
 # Remove stale CMake cache to avoid referencing old Conan package paths
 echo "Clearing CMake cache for fresh configure..."
 rm -rf "$BUILD_PATH/CMakeCache.txt" "$BUILD_PATH/CMakeFiles"
+# Also clear nested build directory cache (cmake_layout creates build/<BuildType>/)
+rm -rf "$BUILD_PATH/build/$BUILD_TYPE_CMAKE/CMakeCache.txt" "$BUILD_PATH/build/$BUILD_TYPE_CMAKE/CMakeFiles"
 echo "Building Orbit..."
 
 # Set CMAKE_BUILD_PARALLEL_LEVEL to control parallel jobs if BUILD_JOBS is specified
@@ -136,7 +145,8 @@ conan build /workspace \
     --output-folder="$BUILD_PATH" \
     --profile="$PROFILE" \
     --settings=build_type="$BUILD_TYPE_CMAKE" \
-    -o run_tests=False
+    -o run_tests=False \
+    $CONAN_OPTIONS
 
 echo "========================================"
 echo "Build completed successfully!"

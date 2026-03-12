@@ -124,7 +124,7 @@ class OrbitConan(ConanFile):
             self.requires("libssh2/1.9.0")
 
             if not self.options.system_qt:
-                self.requires("qt/5.15.1@{}".format(self._orbit_channel))
+                self.requires("qt/5.15.14")
 
         if self.options.deploy_opengl_software_renderer:
             self.requires("llvmpipe/21.0.3@{}".format(self._orbit_channel))
@@ -151,10 +151,10 @@ class OrbitConan(ConanFile):
         if self.options.with_gui:
 
             if not self.options.system_qt:
-                self.options["qt"].qtwebengine = True
-                self.options["qt"].qtwebchannel = True
+                self.options["qt"].shared = False
+                self.options["qt"].qtwebengine = False
+                self.options["qt"].qtwebchannel = False
                 self.options["qt"].qtwebsockets = True
-                self.options["qt"].shared = True
                 self.options["qt"].with_sqlite3 = False
                 self.options["qt"].with_mysql = False
                 self.options["qt"].with_pq = False
@@ -172,6 +172,7 @@ class OrbitConan(ConanFile):
         # Conan 2.x: CMake variables are set in generate() via CMakeToolchain
         tc = CMakeToolchain(self)
         tc.variables["WITH_GUI"] = "ON" if self.options.with_gui else "OFF"
+        tc.variables["SYSTEM_QT"] = "ON" if self.options.system_qt else "OFF"
         if self.options.with_gui:
             if self.options.with_crash_handling:
                 tc.variables["WITH_CRASH_HANDLING"] = "ON"

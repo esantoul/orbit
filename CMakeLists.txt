@@ -95,16 +95,14 @@ find_package(gte REQUIRED)
 
 if(WITH_GUI)
   find_package(OpenGL REQUIRED)
-  find_package(
-    Qt5 CONFIG REQUIRED
-    COMPONENTS Core
-               Network
-               Test
-               Widgets
-               WebEngine
-               WebEngineWidgets
-               WebSockets
-               WebChannel)
+
+  set(_QT5_COMPONENTS Core Network Test Widgets WebSockets)
+  if(SYSTEM_QT)
+    # System Qt includes WebEngine/WebChannel
+    list(APPEND _QT5_COMPONENTS WebEngine WebEngineWidgets WebChannel)
+  endif()
+
+  find_package(Qt5 CONFIG REQUIRED COMPONENTS ${_QT5_COMPONENTS})
 endif()
 
 find_package(Filesystem REQUIRED)
